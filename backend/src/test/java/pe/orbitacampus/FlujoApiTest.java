@@ -101,6 +101,16 @@ class FlujoApiTest {
         correcto("GET","/admin",admin,null,401);
     }
 
+    @Test void reservaLasCuentasDelGrupoParaElAprovisionamiento() {
+        String reservado = "orbita.campus.g7.admin@unmsm.edu.pe";
+        correcto("POST", "/auth/registro", null,
+                Map.of("nombre", "Persona de prueba", "correo", reservado, "clave", CLAVE), 202);
+        correcto("POST", "/auth/reenviar", null, Map.of("correo", reservado), 202);
+        correcto("POST", "/auth/recuperar", null, Map.of("correo", reservado), 202);
+        assertThat(db.sql("SELECT COUNT(*) FROM usuarios WHERE correo=:correo").param("correo", reservado)
+                .query(Long.class).single()).isZero();
+    }
+
     private String registrar(String correo) throws Exception {
         correcto("POST","/auth/registro",null,Map.of("nombre","Persona de prueba","correo",correo,"clave",CLAVE),202);
         correcto("POST","/auth/login",null,Map.of("correo",correo,"clave",CLAVE),403);

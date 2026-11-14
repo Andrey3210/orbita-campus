@@ -22,9 +22,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.mail.MailException;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -42,20 +39,17 @@ class ServicioCuentas {
     private final JdbcClient db;
     private final PasswordEncoder claves;
     private final JwtEncoder jwt;
-    private final JavaMailSender correo;
-    private final String origenCorreo;
+    private final CorreoCuentas correo;
     private final String enlace;
     private final String claveInvalida;
     private final SecureRandom azar = new SecureRandom();
 
-    ServicioCuentas(JdbcClient db, PasswordEncoder claves, JwtEncoder jwt, JavaMailSender correo,
-                    @Value("${campus.mail-from}") String origenCorreo,
+    ServicioCuentas(JdbcClient db, PasswordEncoder claves, JwtEncoder jwt, CorreoCuentas correo,
                     @Value("${campus.verification-link}") String enlace) {
         this.db = db;
         this.claves = claves;
         this.jwt = jwt;
         this.correo = correo;
-        this.origenCorreo = origenCorreo;
         this.enlace = enlace;
         this.claveInvalida = claves.encode(Base64.getUrlEncoder().encodeToString(azar.generateSeed(32)));
     }
@@ -101,7 +95,7 @@ class ServicioCuentas {
         String normal = Reglas.correo(direccion);
         validarClave(clave);
         String nombreValido = Reglas.texto(nombre, 2, 100, "El nombre");
-        if (porCorreo(normal) != null) return;
+        if (CuentasPrueba.reservada(normal) || porCorreo(normal) != null) return;
         try {
             db.sql("INSERT INTO usuarios (nombre, correo, clave, rol) VALUES (:nombre,:correo,:clave,'ESTUDIANTE')")
                     .param("nombre", nombreValido).param("correo", normal).param("clave", claves.encode(clave)).update();
@@ -114,7 +108,8 @@ class ServicioCuentas {
     @Transactional
     public void reenviar(String correoInstitucional) {
         String normal = Reglas.correo(correoInstitucional);
-        validarEnvio();
+        correo.validarConfiguracion();
+        if (CuentasPrueba.reservada(normal)) return;
         String token = nuevoToken();
         Instant ahora = Instant.now();
         int cambios = db.sql("""
@@ -131,7 +126,8 @@ class ServicioCuentas {
     @Transactional
     public void recuperar(String direccion) {
         String normal = Reglas.correo(direccion);
-        validarEnvio();
+        correo.validarConfiguracion();
+        if (CuentasPrueba.reservada(normal)) return;
         var destinatario = db.sql("""
                 SELECT id FROM usuarios WHERE correo=:correo AND activo=TRUE AND verificado=TRUE FOR UPDATE
                 """).param("correo", normal).query(Long.class).optional();
@@ -200,22 +196,9 @@ class ServicioCuentas {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(azar.generateSeed(32));
     }
 
-    private void validarEnvio() {
-        if (origenCorreo.isBlank()) throw error(HttpStatus.SERVICE_UNAVAILABLE, "El envío de correo todavía no está configurado.");
-    }
-
     private void enviar(String destino, String asunto, String instruccion, String parametro, String token) {
-        SimpleMailMessage mensaje = new SimpleMailMessage();
-        mensaje.setFrom(origenCorreo);
-        mensaje.setTo(destino);
-        mensaje.setSubject(asunto);
-        mensaje.setText(instruccion + ":\n\n" + enlace + "?" + parametro + "=" + token
+        correo.enviar(destino, asunto, instruccion + ":\n\n" + enlace + "?" + parametro + "=" + token
                 + "\n\nSi no solicitaste este enlace, puedes ignorar este mensaje.");
-        try {
-            correo.send(mensaje);
-        } catch (MailException fallo) {
-            throw error(HttpStatus.SERVICE_UNAVAILABLE, "No se pudo enviar el correo. Vuelve a intentarlo más tarde.");
-        }
     }
 
     @Transactional

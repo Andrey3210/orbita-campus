@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
-@Profile("pruebas-locales")
+@Profile({"pruebas-locales", "provisionar-grupo7"})
 class CuentasPrueba implements ApplicationRunner {
     private final Environment entorno;
     private final ServicioCuentas cuentas;
@@ -25,7 +25,8 @@ class CuentasPrueba implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        if (!Set.of("127.0.0.1", "::1").contains(entorno.getProperty("server.address", ""))) {
+        if (entorno.matchesProfiles("pruebas-locales")
+                && !Set.of("127.0.0.1", "::1").contains(entorno.getProperty("server.address", ""))) {
             throw new IllegalStateException("Usa las cuentas de prueba en un servidor local.");
         }
         var claves = new EnumMap<Reglas.Rol, String>(Reglas.Rol.class);
@@ -35,9 +36,17 @@ class CuentasPrueba implements ApplicationRunner {
         if (Set.copyOf(claves.values()).size() != claves.size()) {
             throw new IllegalStateException("Configura una contraseña distinta para cada cuenta de prueba.");
         }
-        claves.forEach((rol, clave) -> {
-            String correo = "orbita.campus.g7." + rol.name().toLowerCase(Locale.ROOT) + "@unmsm.edu.pe";
-            cuentas.provisionarPrueba(rol, correo, clave);
-        });
+        claves.forEach((rol, clave) -> cuentas.provisionarPrueba(rol, direccion(rol), clave));
+    }
+
+    static boolean reservada(String correo) {
+        for (var rol : Reglas.Rol.values()) {
+            if (direccion(rol).equals(correo)) return true;
+        }
+        return false;
+    }
+
+    private static String direccion(Reglas.Rol rol) {
+        return "orbita.campus.g7." + rol.name().toLowerCase(Locale.ROOT) + "@unmsm.edu.pe";
     }
 }

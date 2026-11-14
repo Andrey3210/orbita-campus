@@ -1,5 +1,10 @@
 # Historial de versiones
 
+## 0.3.0-rc.4
+
+- Configuración de despliegue de la API con MySQL en Railway y comprobación de disponibilidad desde GitHub Pages.
+- Envío opcional de enlaces de cuenta por HTTPS y aprovisionamiento de los cuatro perfiles mediante secretos del servidor.
+
 ## 0.3.0-rc.3
 
 - Acceso y permisos gestionados por la API en todo el portal.

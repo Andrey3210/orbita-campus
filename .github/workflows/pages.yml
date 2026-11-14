@@ -28,6 +28,13 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - uses: actions/configure-pages@v5
+      - name: Comprobar API pública
+        if: ${{ vars.VITE_API_URL != '' }}
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+        run: |
+          [[ "$VITE_API_URL" == https://* ]]
+          curl --fail --silent --show-error --max-time 20 --retry 3 "${VITE_API_URL%/}/actuator/health" | jq -e '.status == "UP"'
       - name: Probar y compilar frontend
         working-directory: frontend
         env:
