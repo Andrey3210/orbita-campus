@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { correoValido, roles } from './modelo.js';
 import { accesoDisponible, peticion } from './api.js';
 import { informeFinal } from './enlaces.js';
@@ -14,7 +14,7 @@ const modos = {
   restablecer: ['Nueva contraseña', 'Elige una nueva contraseña para acceder a Órbita Campus.'],
 };
 const tokenValido = (valor) => /^[A-Za-z0-9_-]{43}$/.test(valor ?? '');
-const requisitos = 'Usa al menos 12 caracteres, con una letra y un número (máximo 72 bytes).';
+const requisitos = 'Usa al menos 12 caracteres e incluye una letra y un número.';
 const bytes = (valor) => new TextEncoder().encode(valor).length;
 
 export function Marca({ movil = false }) {
@@ -39,7 +39,8 @@ function Clave({ nombre = 'clave', titulo = 'Contraseña', nueva, describir = fa
 }
 
 function validarClave(datos) {
-  if (datos.clave.length < 12 || bytes(datos.clave) > 72 || !/\p{L}/u.test(datos.clave) || !/\p{Nd}/u.test(datos.clave)) {
+  if (bytes(datos.clave) > 72) throw new Error('La contraseña es demasiado larga. Prueba una más corta.');
+  if (datos.clave.length < 12 || !/\p{L}/u.test(datos.clave) || !/\p{Nd}/u.test(datos.clave)) {
     throw new Error(requisitos);
   }
   if (datos.clave !== datos.confirmacion) throw new Error('Las contraseñas deben coincidir.');
@@ -65,7 +66,7 @@ export function Acceso({ ruta, onSesion, mensaje, avisar, destino }) {
   return <div className="portal">
     <main id="contenido" className="portal-contenido">
       <header className="portal-cabecera"><Marca /><span>Proyecto académico · UNMSM</span></header>
-      <FormularioAcceso key={ruta} modo={modo} token={token} onSesion={onSesion}
+      <FormularioAcceso key={modo + ':' + token} modo={modo} token={token} onSesion={onSesion}
         mensaje={mensaje} avisar={avisar} destino={destino} />
       <footer className="portal-pie"><span>Grupo 7 · Taller de Software Web</span>
         <div><a href={informeFinal}>Informe del proyecto</a><a href={repositorio}>GitHub</a></div>
@@ -81,19 +82,34 @@ export function Acceso({ ruta, onSesion, mensaje, avisar, destino }) {
 
 function FormularioAcceso({ modo, token, onSesion, mensaje, avisar, destino }) {
   const [error, setError] = useState('');
+  const [errorCorreo, setErrorCorreo] = useState('');
+  const [pendiente, setPendiente] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [correo, setCorreo] = useState('');
+  const encabezado = useRef(null);
+  const correoCampo = useRef(null);
   const [titulo, texto] = modos[modo];
   const conToken = modo === 'verificar' || modo === 'restablecer';
   const enlaceInvalido = conToken && !tokenValido(token);
+  useEffect(() => {
+    document.title = titulo + ' · Órbita Campus';
+    if (modo !== 'login') encabezado.current?.focus({ preventScroll: true });
+  }, [modo, titulo]);
+
   async function enviar(evento) {
     evento.preventDefault();
     if (ocupado || enlaceInvalido) return;
     const datos = Object.fromEntries(new FormData(evento.currentTarget));
     setError('');
+    setPendiente(false);
+    setErrorCorreo('');
     avisar('');
+    if (!conToken && !correoValido(datos.correo)) {
+      setErrorCorreo('Usa un correo válido de la UNMSM, como ejemplo@unmsm.edu.pe.');
+      correoCampo.current?.focus();
+      return;
+    }
     try {
-      if (!conToken && !correoValido(datos.correo)) throw new Error('Escribe un correo válido como ejemplo@unmsm.edu.pe.');
       if (datos.correo) datos.correo = datos.correo.trim().toLowerCase();
       if (modo === 'registro') {
         datos.nombre = datos.nombre.trim();
@@ -115,28 +131,33 @@ function FormularioAcceso({ modo, token, onSesion, mensaje, avisar, destino }) {
         avisar(modo === 'verificar' ? 'Correo verificado. Ya puedes iniciar sesión.'
           : modo === 'restablecer' ? 'Contraseña actualizada. Inicia sesión con tu nueva contraseña.'
           : modo === 'recuperar' ? 'Si la cuenta está activa, recibirás un enlace para restablecer tu contraseña.'
-          : 'Si corresponde, recibirás un enlace para verificar tu correo.');
+          : 'Revisa tu correo institucional y la carpeta de correo no deseado. Si corresponde, recibirás un enlace de verificación.');
         location.hash = 'acceso';
       }
     } catch (fallo) {
       setError(fallo.message);
+      setPendiente(modo === 'login' && fallo.estado === 403);
     } finally {
       setOcupado(false);
     }
   }
   return <section className="portal-forma" aria-labelledby="acceso-titulo">
     {modo !== 'login' && <a href="#acceso" className="enlace acceso-volver">← Volver al inicio de sesión</a>}
-    <h1 id="acceso-titulo">{titulo}</h1>
+    <h1 id="acceso-titulo" tabIndex="-1" ref={encabezado}>{titulo}</h1>
     <p className="portal-intro">{texto}</p>
     {!accesoDisponible && <p className="aviso acceso-nota">El servicio de acceso aún no está conectado a esta página.</p>}
     {mensaje && modo === 'login' && <p className="aviso" role="status">{mensaje}</p>}
     {(error || enlaceInvalido) && <p className="aviso error" role="alert">{error || 'El enlace es inválido. Solicita uno nuevo.'}</p>}
+    {pendiente && <p className="acceso-siguiente"><a className="enlace" href="#acceso/reenviar">Reenviar verificación a tu buzón</a></p>}
     {!enlaceInvalido && <form className="formulario formulario-acceso" onSubmit={enviar} aria-busy={ocupado}>
         {modo === 'registro' && <label>Nombre completo<input name="nombre" minLength={2} maxLength={100} required autoComplete="name" /></label>}
-        {!conToken && <label htmlFor="correo-institucional">Correo institucional
-          <input id="correo-institucional" name="correo" type="email" required maxLength={180} value={correo}
+        {!conToken && <div className="campo-clave"><label htmlFor="correo-institucional">Correo institucional</label>
+          <input id="correo-institucional" name="correo" type="email" required maxLength={180} value={correo} ref={correoCampo}
+            aria-invalid={Boolean(errorCorreo)} aria-describedby={errorCorreo ? 'error-correo' : 'ayuda-correo'}
             autoCapitalize="none" spellCheck={false} autoComplete={modo === 'login' ? 'username' : 'email'}
-            placeholder="ejemplo@unmsm.edu.pe" onChange={(evento) => setCorreo(evento.target.value)} /></label>}
+            placeholder="ejemplo@unmsm.edu.pe" onChange={(evento) => { setCorreo(evento.target.value); setErrorCorreo(''); }} />
+          {errorCorreo ? <span id="error-correo" className="error-campo" role="alert">{errorCorreo}</span>
+            : <span id="ayuda-correo" className="ayuda-campo">Usa tu dirección terminada en @unmsm.edu.pe.</span>}</div>}
         {(modo === 'login' || modo === 'verificar') && <Clave />}
         {(modo === 'registro' || modo === 'restablecer') && <CamposNuevaClave />}
         {modo === 'login' && <a className="enlace recuperar" href="#acceso/recuperar">¿Olvidaste tu contraseña?</a>}
@@ -185,12 +206,15 @@ export function MiCuenta({ sesion, onSesion, avisar }) {
     } finally { setOcupado(false); }
   }
   return <div className="pila">
-    <section className="panel cuenta"><h2>{sesion.perfil.nombre}</h2>
-      <p>{sesion.perfil.correo} · {roles[sesion.perfil.rol]}</p>
+    <section className="panel cuenta"><h2>Perfil institucional</h2>
+      <dl className="ficha ficha-cuenta"><div><dt>Nombre</dt><dd>{sesion.perfil.nombre}</dd></div>
+        <div><dt>Rol</dt><dd>{roles[sesion.perfil.rol]}</dd></div>
+        <div><dt>Correo verificado</dt><dd>{sesion.perfil.correo}</dd></div></dl>
       <button className="secundario" disabled={ocupado} onClick={salir}>Cerrar sesión</button>
     </section>
     {error && <p className="aviso error" role="alert">{error}</p>}
     <section className="panel cuenta"><h2>Cambiar contraseña</h2>
+      <p>Al guardar, se cerrarán tus sesiones y tendrás que entrar con la nueva contraseña.</p>
       <form className="formulario" onSubmit={cambiar}>
         <Clave nombre="anterior" titulo="Contraseña actual" /><CamposNuevaClave />
         <button className="primario" disabled={ocupado}>Guardar y cerrar sesión</button>
