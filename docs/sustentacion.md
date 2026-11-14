@@ -14,4 +14,4 @@ Duración sugerida de 8 a 10 minutos. Usa [Órbita Campus](https://andrey3210.gi
 
 ## Validación con usuarios del grupo
 
-Pide a integrantes que no prepararon el caso que ejecuten los pasos asignados con sus cuentas. Registra fecha, rol, tarea, resultado, tiempo y comentario. Para repetir un fallo, conserva el estado, el paso y la referencia de soporte. El recorrido de Playwright sirve como evidencia técnica del flujo y puede usarse para preparar la sesión humana.
+Completa el [registro de validación con usuarios](validacion-usuarios.md) con lo que observó el grupo. Para repetir un fallo, conserva el estado, el paso y la referencia de soporte. El recorrido de Playwright documenta la aceptación automatizada.
