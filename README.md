@@ -3,6 +3,7 @@
 Proyecto académico para registrar y atender solicitudes de servicios universitarios de la UNMSM. Conserva la estructura de tablero y navegación de [Órbita Finanzas](https://github.com/Andrey3210/orbita-finanzas) y utiliza una paleta institucional con imágenes generadas de espacios universitarios referenciales.
 
 - [Portal en GitHub Pages](https://andrey3210.github.io/orbita-campus/)
+- [Entrega final · Fases I a IV](docs/entrega-final.md) · [Manual de usuario](docs/manual-usuario.md) · [Manual técnico](docs/manual-tecnico.md)
 - [Segundo entregable](docs/segundo-entregable.md) · [Especificación y BDD](docs/especificacion.md) · [Registro de uso de IA](docs/registro-ia.md)
 - [Informe del segundo entregable (PDF)](docs/Informe-segundo-entregable.pdf)
 - [Evidencias de las fases I a III](docs/cierre-fase-iii.md)
