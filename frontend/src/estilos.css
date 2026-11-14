@@ -88,8 +88,6 @@ p { line-height: 1.52; color: var(--suave); }
 
 .filas { padding: 0; list-style: none; margin-top: 8px; }
 .filas li + li { border-top: 1px solid #e2eaf3; }
-.filas li button { background: transparent; border: 0; padding: 9px 0; display: flex; width: 100%; gap: 8px; align-items: center; color: var(--tinta); text-align: left; }
-.filas li button:hover .fila-titulo strong { text-decoration: underline; }
 .fila-titulo { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .fila-titulo strong { font-size: 13px; display: block; }
 .fila-titulo small { font-size: 11px; color: var(--suave); }
@@ -107,10 +105,6 @@ textarea { resize: vertical; }
 .cuenta { max-width: 650px; }
 .cuenta p { margin-block: 8px 12px; }
 .cuenta .acciones { margin-top: 12px; }
-.perfiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 13px 0; }
-.perfil { display: grid; gap: 6px; text-align: left; border: 1px solid #ccd9e9; background: #f4f7fb; border-radius: 12px; color: var(--tinta); padding: 11px; }
-.perfil span { font-size: 12px; color: var(--suave); }
-.perfil[aria-pressed="true"] { border-color: #2762a9; background: #e8f1fd; }
 .ficha { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin-bottom: 12px; }
 .ficha div { padding: 8px; background: #eef4fa; border-radius: 9px; overflow-wrap: anywhere; }
 .ficha dt,.identidad small { font-size: 11px; color: var(--suave); }
@@ -168,6 +162,39 @@ footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8p
 .portal-imagen figcaption strong { font-size: clamp(23px, 3.3vw, 48px); letter-spacing: -.048em; line-height: 1.05; }
 .portal-imagen figcaption p { color: #e4edf8; font-size: 13px; }
 
+.titular h1, .panel-formulario h1 { font-size: clamp(28px, 4.6vw, 43px); letter-spacing: -.045em; }
+.panel-formulario { max-width: 760px; }
+.introduccion-formulario { margin-block: 8px 16px; }
+.formulario .ayuda-campo { margin: 0; font-weight: 400; line-height: 1.45; }
+.formulario input[aria-invalid="true"] { border-color: #973f39; }
+.error-campo { color: #8a302d; font-size: 13px; }
+.acceso-siguiente { margin-bottom: 12px; }
+.ficha-cuenta { margin-block: 14px; }
+.ficha-cuenta div:last-child { grid-column: 1 / -1; }
+.lista-herramientas, .periodo { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 8px 14px; margin: 10px 0; }
+.periodo { justify-content: flex-start; margin: 0 0 16px; }
+.periodo p { font-size: 13px; padding-block: 9px; }
+.lista-herramientas .cantidad { margin: 0; align-self: center; }
+.filas li a { display: flex; width: 100%; gap: 10px; align-items: center; text-decoration: none; padding: 10px 6px; min-height: 54px; border-radius: 8px; }
+.filas li a:hover { background: #eff5fc; }
+.filas li a:hover .fila-titulo strong { text-decoration: underline; text-underline-offset: 3px; }
+.flecha-fila { color: var(--sello); font-size: 21px; line-height: 1; }
+.plazo-vencido, .fila-titulo .plazo-vencido { display: block; color: #8a352f; font-weight: 700; margin-top: 4px; }
+.estado { font-size: 11px; }
+.estado.cerrada { background: #e8ecf2; color: #48556a; }
+.historial li { padding: 0 0 8px 4px; }
+.historial li + li { padding-top: 7px; border-top: 1px solid var(--borde); }
+.historial time { display: inline-block; font-size: 11px; }
+.historial li p { white-space: pre-wrap; }
+.etapa-titulo h2 { font-size: 1rem; }
+.admin-filtros { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+.admin-filtros label { flex: 1 1 180px; }
+.admin-nuevo { border: 1px solid var(--borde); border-radius: 12px; padding: 12px; }
+.admin-nuevo summary { cursor: pointer; font-weight: 700; font-size: 14px; }
+.admin-nuevo[open] summary { margin-bottom: 12px; }
+.primario,.secundario,.peligro { min-height: 36px; }
+input,textarea,select { min-height: 40px; }
+
 @media (max-width: 1120px) { .navegacion { width: 182px; }.navegacion .marca { font-size: 18px; }.espacio { margin-left: 182px; padding-inline: 20px; }.etapas { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 760px) {
   .portal { grid-template-columns: 1fr; }
@@ -177,21 +204,25 @@ footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8p
   .navegacion { inset: auto 0 0; width: auto; padding: 3px 5px max(4px,env(safe-area-inset-bottom)); border: 0; border-top: 1px solid var(--borde); }
   .navegacion .marca,.navegacion > small { display: none; }
   .navegacion nav { display: flex; gap: 2px; justify-content: space-around; }
-  .navegacion nav a { flex: 1 1 0; justify-content: start; flex-direction: column; gap: 2px; padding: 3px 0; font-size: clamp(7px,2vw,10px); }
+  .navegacion nav a { flex: 1 1 0; min-width: 0; min-height: 48px; justify-content: center; flex-direction: column; gap: 2px; padding: 2px 0; font-size: clamp(9px,2.4vw,11px); white-space: normal; text-align: center; overflow-wrap: anywhere; }
   .navegacion nav a span { width: 25px; height: 25px; flex-basis: 25px; font-size: 15px; }
   .espacio { margin-left: 0; padding: 10px 12px 72px; }
   .marca-movil { display: flex; margin-right: auto; font-size: 17px; }
   .tablero { grid-template-columns: 1fr; }
   .graficos { grid-template-columns: 1fr; }
+  .primario,.secundario,.peligro { min-height: 44px; }
+  input,textarea,select { min-height: 44px; font-size: 16px; }
+  .opciones-acceso .enlace, .recuperar { display: inline-flex; align-items: center; min-height: 30px; }
 }
 @media (max-width: 450px) {
   .portal-cabecera .marca { font-size: 17px; }
   .portal-cabecera > span { max-width: 104px; }
   .portal-contenido { min-height: auto; }
   .cabecera { flex-wrap: wrap; gap: 5px; }
-  .cabecera a.secundario,.modo { font-size: 9px; padding: 5px; }
+  .cabecera a.secundario { font-size: 11px; padding: 5px 8px; min-height: 44px; }
+  .modo { display: none; }
   .panel,.resumen-principal { padding: 13px; border-radius: 16px; }
-  .filtros { grid-template-columns: 1fr 1fr; }.filtros input { grid-column: 1 / -1; }
+  .filtros { grid-template-columns: 1fr; }
   .ficha,.metricas { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .etapas,.graficos { grid-template-columns: 1fr; }
 }

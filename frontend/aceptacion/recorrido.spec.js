@@ -17,7 +17,7 @@ async function salir(page) {
 
 async function abrir(page, asunto) {
   await page.getByRole('link', { name: 'Solicitudes', exact: true }).click();
-  await page.getByRole('button', { name: new RegExp(asunto) }).click();
+  await page.getByRole('link', { name: new RegExp(asunto) }).click();
   await expect(page.getByRole('heading', { name: asunto, exact: true })).toBeVisible();
 }
 
@@ -44,10 +44,33 @@ test('aceptación de los cuatro perfiles y los seis estados', async ({ page }) =
   await page.getByRole('button', { name: 'Registrar solicitud', exact: true }).click();
   await expect(page.getByRole('heading', { name: asunto, exact: true })).toBeVisible();
   await expect(page.locator('.titular.detalle').getByText('Registrada', { exact: true })).toBeVisible();
+  await expect(page.getByRole('status')).toContainText('Solicitud registrada');
+  await expect(page).toHaveURL(/#solicitudes\/\d+$/);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: asunto, exact: true })).toBeFocused();
+  await page.getByRole('button', { name: /Volver a Solicitudes/ }).click();
+  const buscar = page.getByRole('searchbox', { name: 'Buscar solicitudes' });
+  await buscar.fill(asunto);
+  await page.getByRole('link', { name: new RegExp(asunto) }).click();
+  await page.getByRole('button', { name: /Volver a Solicitudes/ }).click();
+  await expect(buscar).toHaveValue(asunto);
+  await page.getByRole('button', { name: 'Limpiar filtros' }).click();
+  await expect(buscar).toHaveValue('');
+  await page.getByRole('link', { name: 'Seguimiento', exact: true }).click();
+  await page.getByRole('button', { name: 'Ocultar etapas vacías' }).click();
+  await expect(page.getByRole('button', { name: 'Ocultar etapas vacías' })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('link', { name: new RegExp(asunto) }).click();
+  await page.getByRole('button', { name: /Volver a Seguimiento/ }).click();
+  await expect(page).toHaveURL(/#seguimiento$/);
+  await page.getByRole('link', { name: 'Indicadores', exact: true }).click();
+  await page.getByLabel('Periodo de registro').selectOption('7');
+  await expect(page.getByRole('status')).toContainText(/\d+ solicitudes en el periodo/);
   await salir(page);
 
   await entrar(page, 'SUPERVISOR');
   await abrir(page, asunto);
+  await expect(page.getByLabel('Estado', { exact: true })).toHaveValue('REGISTRADA');
+  await expect(page.getByRole('button', { name: 'Guardar cambios', exact: true })).toBeDisabled();
   await cambiarEstado(page, 'EVALUACION', 'En evaluación');
   await cambiarEstado(page, 'ASIGNADA', 'Asignada', async () => {
     const tecnico = page.getByLabel('Técnico responsable', { exact: true });
@@ -73,9 +96,28 @@ test('aceptación de los cuatro perfiles y los seis estados', async ({ page }) =
 
   await entrar(page, 'ADMIN');
   await page.getByRole('link', { name: 'Administración', exact: true }).click();
+  await page.getByLabel('Filtrar por rol').selectOption('TECNICO');
+  await expect(page.locator('.admin-registros .identidad').first()).toBeVisible();
+  await page.getByRole('searchbox', { name: 'Buscar en usuarios' }).fill('técnico de prueba');
+  await expect(page.locator('.admin-registros .identidad')).toHaveCount(1);
   await page.getByRole('button', { name: 'Categorías', exact: true }).click();
-  await expect(page.locator('.admin-registros form').first()).toBeVisible();
+  await expect(page.locator('.admin-registros > form').first()).toBeVisible();
   await salir(page);
+});
+
+test('el acceso valida el dominio en su campo y ofrece recuperar enlaces', async ({ page }) => {
+  await page.goto('/');
+  const correo = page.getByLabel('Correo institucional', { exact: true });
+  await correo.fill('alumno@example.com');
+  await page.locator('#clave').fill('ClaveDeEvaluacion23');
+  await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
+  await expect(correo).toHaveAttribute('aria-invalid', 'true');
+  await expect(correo).toBeFocused();
+  await expect(page.getByRole('alert')).toContainText('unmsm.edu.pe');
+  await page.goto('/#cuenta?restablecer=invalido');
+  await expect(page.getByRole('heading', { name: 'Nueva contraseña' })).toBeFocused();
+  await page.getByRole('link', { name: 'Solicitar otro enlace' }).click();
+  await expect(page.getByRole('heading', { name: 'Recuperar contraseña' })).toBeVisible();
 });
 
 test('acceso y navegación con teclado en vista móvil', async ({ page }) => {

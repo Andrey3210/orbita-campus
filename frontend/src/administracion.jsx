@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { roles } from './modelo.js';
+import { normalizar, roles } from './modelo.js';
 
 const secciones = [
   ['usuarios','Usuarios'], ['categorias','Categorías'], ['areas','Áreas'],
@@ -32,7 +32,7 @@ function Fila({ grupo, dato, datos, perfil, ejecutar, ocupado }) {
     {personal ? <div className="identidad"><strong>{nombre}</strong><small>{dato.correo} · {dato.verificado ? 'Verificado' : 'Pendiente de verificación'}</small></div>
       : <label>{nuevo ? 'Nombre nuevo' : 'Nombre'}<input name="nombre" required minLength={2}
         maxLength={['prioridades','estados'].includes(grupo) ? 32 : 80} defaultValue={nombre} /></label>}
-    {personal && <label>Rol<select name="rol" disabled={soloLectura} defaultValue={dato.rol}>
+    {personal && <label>Rol<select aria-label={'Rol de ' + nombre} name="rol" disabled={soloLectura} defaultValue={dato.rol}>
       {datos.roles.map((rol) => <option key={rol} value={rol}>{roles[rol]}</option>)}</select></label>}
     {categoria && <label>Área<select name="areaId" required defaultValue={dato?.areaId ?? ''}>
       <option value="">Seleccionar</option>{datos.areas.map((area) => <option key={area.id} value={area.id}>{area.nombre}</option>)}
@@ -47,15 +47,30 @@ function Fila({ grupo, dato, datos, perfil, ejecutar, ocupado }) {
 
 export function Administracion({ datos, perfil, ejecutar, ocupado }) {
   const [grupo, setGrupo] = useState('usuarios');
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroRol, setFiltroRol] = useState('');
   if (!datos) return <section className="panel"><h1>Administración</h1><p>Inicia sesión con un perfil administrador para gestionar los catálogos.</p></section>;
   const puedeCrear = ['areas','categorias'].includes(grupo);
+  const registros = datos[grupo].filter(dato =>
+    (!filtroRol || grupo !== 'usuarios' || filtroRol === dato.rol)
+    && normalizar([dato.nombre, dato.correo, dato.clave].filter(Boolean).join(' ')).includes(normalizar(busqueda)));
   return <><div className="titular"><div><h1>Administración</h1><p>Gestiona roles, accesos y catálogos del sistema.</p></div></div>
     <section className="panel">
-      <div className="pestanas">{secciones.map(([id, nombre]) => <button key={id} className="secundario" aria-pressed={grupo === id}
-        onClick={() => setGrupo(id)}>{nombre}</button>)}</div>
+      <div className="pestanas acciones" role="group" aria-label="Catálogos de administración">{secciones.map(([id, nombre]) => <button key={id} className="secundario" aria-pressed={grupo === id}
+        onClick={() => { setGrupo(id); setBusqueda(''); setFiltroRol(''); }}>{nombre}</button>)}</div>
+      <div className="admin-filtros">
+        <label>Buscar en {secciones.find(([id]) => id === grupo)[1].toLowerCase()}<input type="search" value={busqueda}
+          onChange={e => setBusqueda(e.target.value)} /></label>
+        {grupo === 'usuarios' && <label>Filtrar por rol<select aria-label="Filtrar por rol" value={filtroRol} onChange={e => setFiltroRol(e.target.value)}>
+          <option value="">Todos los roles</option>{datos.roles.map(rol => <option key={rol} value={rol}>{roles[rol]}</option>)}
+        </select></label>}
+      </div>
+      <p className="cantidad" role="status">{registros.length} de {datos[grupo].length} registros</p>
       <div className="pila admin-registros">
-        {puedeCrear && <Fila key={grupo + ':nuevo'} grupo={grupo} datos={datos} perfil={perfil} ejecutar={ejecutar} ocupado={ocupado} />}
-        {datos[grupo].map((dato) => <Fila key={grupo + ':' + (dato.id ?? dato.clave) + ':' + JSON.stringify(dato)}
+        {puedeCrear && <details className="admin-nuevo" key={grupo}><summary>{grupo === 'areas' ? 'Añadir área' : 'Añadir categoría'}</summary>
+          <Fila grupo={grupo} datos={datos} perfil={perfil} ejecutar={ejecutar} ocupado={ocupado} /></details>}
+        {!registros.length && <p className="vacio">No hay registros que coincidan con la búsqueda.</p>}
+        {registros.map((dato) => <Fila key={grupo + ':' + (dato.id ?? dato.clave) + ':' + JSON.stringify(dato)}
           grupo={grupo} dato={dato} datos={datos} perfil={perfil} ejecutar={ejecutar} ocupado={ocupado} />)}
       </div>
     </section></>;

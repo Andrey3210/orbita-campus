@@ -2,10 +2,11 @@ const configurada = import.meta.env.VITE_API_URL?.trim() ?? '';
 const base = configurada.replace(/\/$/, '');
 export const accesoDisponible = Boolean(configurada || import.meta.env.DEV);
 
-export async function peticion(ruta, { metodo = 'GET', cuerpo, sesion } = {}) {
+export async function peticion(ruta, { metodo = 'GET', cuerpo, sesion, signal } = {}) {
   if (!accesoDisponible) throw new Error('El servicio de acceso aún no está conectado a esta página.');
   let respuesta;
   try {
+    const tiempo = AbortSignal.timeout(12000);
     respuesta = await fetch(base + '/api' + ruta, {
       method: metodo,
       headers: {
@@ -13,7 +14,7 @@ export async function peticion(ruta, { metodo = 'GET', cuerpo, sesion } = {}) {
         ...(cuerpo && { 'Content-Type': 'application/json' }),
       },
       body: cuerpo ? JSON.stringify(cuerpo) : undefined,
-      signal: AbortSignal.timeout(12000),
+      signal: signal ? AbortSignal.any([signal, tiempo]) : tiempo,
     });
   } catch {
     throw new Error('No se pudo conectar con el servicio. Vuelve a intentar.');
