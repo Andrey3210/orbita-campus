@@ -47,5 +47,5 @@ jobs:
           argumentos=()
           if [[ "$VERSION_PUBLICADA" == *-* ]]; then argumentos+=(--prerelease); fi
           gh release create "$VERSION_PUBLICADA" --verify-tag "${argumentos[@]}" \
-            --title "Órbita Campus $GITHUB_REF_NAME" --notes-file docs/segundo-entregable.md \
+            --title "Órbita Campus $VERSION_PUBLICADA" --notes-file docs/segundo-entregable.md \
             backend/target/orbita-campus-*.jar
