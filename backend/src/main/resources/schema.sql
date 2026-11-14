@@ -1,0 +1,63 @@
+CREATE TABLE IF NOT EXISTS usuarios (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  nombre VARCHAR(100) NOT NULL,
+  correo VARCHAR(180) NOT NULL UNIQUE,
+  clave VARCHAR(80) NOT NULL,
+  rol VARCHAR(24) NOT NULL,
+  activo BOOLEAN NOT NULL DEFAULT TRUE,
+  verificado BOOLEAN NOT NULL DEFAULT FALSE,
+  token_hash CHAR(64),
+  token_vence TIMESTAMP NULL,
+  version_sesion INT NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS areas (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  nombre VARCHAR(80) NOT NULL UNIQUE
+);
+CREATE TABLE IF NOT EXISTS categorias (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  nombre VARCHAR(80) NOT NULL UNIQUE,
+  area_id BIGINT NOT NULL,
+  activo BOOLEAN NOT NULL DEFAULT TRUE,
+  FOREIGN KEY (area_id) REFERENCES areas(id)
+);
+CREATE TABLE IF NOT EXISTS prioridades (
+  clave VARCHAR(18) PRIMARY KEY,
+  nombre VARCHAR(32) NOT NULL,
+  horas INT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS estados (
+  clave VARCHAR(24) PRIMARY KEY,
+  nombre VARCHAR(32) NOT NULL
+);
+CREATE TABLE IF NOT EXISTS solicitudes (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  usuario_id BIGINT NOT NULL,
+  categoria_id BIGINT NOT NULL,
+  responsable_id BIGINT,
+  titulo VARCHAR(120) NOT NULL,
+  descripcion VARCHAR(2000) NOT NULL,
+  ubicacion VARCHAR(150) NOT NULL,
+  evidencia VARCHAR(500),
+  prioridad VARCHAR(18) NOT NULL,
+  estado VARCHAR(24) NOT NULL,
+  creada TIMESTAMP NOT NULL,
+  vence TIMESTAMP NOT NULL,
+  resuelta TIMESTAMP NULL,
+  version INT NOT NULL DEFAULT 0,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+  FOREIGN KEY (categoria_id) REFERENCES categorias(id),
+  FOREIGN KEY (responsable_id) REFERENCES usuarios(id),
+  FOREIGN KEY (prioridad) REFERENCES prioridades(clave),
+  FOREIGN KEY (estado) REFERENCES estados(clave)
+);
+CREATE TABLE IF NOT EXISTS actividad (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  solicitud_id BIGINT NOT NULL,
+  autor_id BIGINT NOT NULL,
+  tipo VARCHAR(24) NOT NULL,
+  mensaje VARCHAR(1000) NOT NULL,
+  fecha TIMESTAMP NOT NULL,
+  FOREIGN KEY (solicitud_id) REFERENCES solicitudes(id),
+  FOREIGN KEY (autor_id) REFERENCES usuarios(id)
+);
