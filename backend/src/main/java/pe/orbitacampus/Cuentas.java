@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.HexFormat;
@@ -113,8 +114,8 @@ class ServicioCuentas {
     @Transactional
     public void reenviar(String correoInstitucional) {
         String normal = Reglas.correo(correoInstitucional);
-        if (origenCorreo.isBlank()) throw error(HttpStatus.SERVICE_UNAVAILABLE, "El envío de verificación todavía no está configurado.");
-        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(azar.generateSeed(32));
+        validarEnvio();
+        String token = nuevoToken();
         Instant ahora = Instant.now();
         int cambios = db.sql("""
                 UPDATE usuarios SET token_hash=:hash, token_vence=:vence
@@ -123,24 +124,120 @@ class ServicioCuentas {
                 """).param("hash", huella(token)).param("vence", java.sql.Timestamp.from(ahora.plusSeconds(1800)))
                 .param("correo", normal).param("limite", java.sql.Timestamp.from(ahora.plusSeconds(1740))).update();
         if (cambios == 0) return;
+        enviar(normal, "Verifica tu cuenta de Órbita Campus",
+                "Confirma tu correo institucional en los próximos 30 minutos", "verificar", token);
+    }
+
+    @Transactional
+    public void recuperar(String direccion) {
+        String normal = Reglas.correo(direccion);
+        validarEnvio();
+        var destinatario = db.sql("""
+                SELECT id FROM usuarios WHERE correo=:correo AND activo=TRUE AND verificado=TRUE FOR UPDATE
+                """).param("correo", normal).query(Long.class).optional();
+        if (destinatario.isEmpty()) return;
+        long id = destinatario.get();
+        Instant ahora = Instant.now();
+        var vigente = db.sql("SELECT vence FROM restablecimientos WHERE usuario_id=:id")
+                .param("id", id).query(Timestamp.class).optional();
+        if (vigente.isPresent() && vigente.get().toInstant().isAfter(ahora.plusSeconds(1740))) return;
+        eliminarRestablecimiento(id);
+        String token = nuevoToken();
+        db.sql("INSERT INTO restablecimientos(usuario_id,token_hash,vence) VALUES (:id,:hash,:vence)")
+                .param("id", id).param("hash", huella(token)).param("vence", Timestamp.from(ahora.plusSeconds(1800))).update();
+        enviar(normal, "Restablece tu contraseña de Órbita Campus",
+                "Elige una contraseña nueva en los próximos 30 minutos", "restablecer", token);
+    }
+
+    @Transactional
+    public void restablecer(String token, String clave) {
+        validarClave(clave);
+        String hash = huella(token);
+        long id = db.sql("SELECT usuario_id FROM restablecimientos WHERE token_hash=:hash")
+                .param("hash", hash).query(Long.class).optional().orElseThrow(ServicioCuentas::enlaceInvalido);
+        Cuenta cuenta = bloquearCuenta(id);
+        if (cuenta == null || !cuenta.perfil.activo || !cuenta.perfil.verificado) throw enlaceInvalido();
+        int filas = db.sql("DELETE FROM restablecimientos WHERE usuario_id=:id AND token_hash=:hash AND vence>:ahora")
+                .param("id", id).param("hash", hash).param("ahora", Timestamp.from(Instant.now())).update();
+        if (filas != 1) throw enlaceInvalido();
+        actualizarClave(cuenta, clave);
+    }
+
+    @Transactional
+    public void cambiarClave(Jwt token, String anterior, String nueva) {
+        validarClave(nueva);
+        Perfil perfil = actual(token);
+        Cuenta cuenta = bloquearCuenta(perfil.id);
+        Number version = token.getClaim("sesion");
+        if (cuenta == null || !cuenta.perfil.activo || cuenta.version != version.intValue()) {
+            throw error(HttpStatus.UNAUTHORIZED, "La sesión ya no está activa.");
+        }
+        if (anterior.getBytes(StandardCharsets.UTF_8).length > 72 || !claves.matches(anterior, cuenta.clave)) {
+            throw error(HttpStatus.BAD_REQUEST, "La contraseña actual es incorrecta.");
+        }
+        actualizarClave(cuenta, nueva);
+        eliminarRestablecimiento(perfil.id);
+    }
+
+    private Cuenta bloquearCuenta(long id) {
+        return db.sql("SELECT * FROM usuarios WHERE id=:id FOR UPDATE").param("id", id)
+                .query((rs, n) -> leerCuenta(rs)).optional().orElse(null);
+    }
+
+    private void actualizarClave(Cuenta cuenta, String clave) {
+        if (claves.matches(clave, cuenta.clave)) {
+            throw error(HttpStatus.BAD_REQUEST, "Elige una contraseña diferente a la actual.");
+        }
+        db.sql("UPDATE usuarios SET clave=:clave,version_sesion=version_sesion+1 WHERE id=:id")
+                .param("id", cuenta.perfil.id).param("clave", claves.encode(clave)).update();
+    }
+
+    private void eliminarRestablecimiento(long id) {
+        db.sql("DELETE FROM restablecimientos WHERE usuario_id=:id").param("id", id).update();
+    }
+
+    private String nuevoToken() {
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(azar.generateSeed(32));
+    }
+
+    private void validarEnvio() {
+        if (origenCorreo.isBlank()) throw error(HttpStatus.SERVICE_UNAVAILABLE, "El envío de correo todavía no está configurado.");
+    }
+
+    private void enviar(String destino, String asunto, String instruccion, String parametro, String token) {
         SimpleMailMessage mensaje = new SimpleMailMessage();
         mensaje.setFrom(origenCorreo);
-        mensaje.setTo(normal);
-        mensaje.setSubject("Verifica tu cuenta de Órbita Campus");
-        mensaje.setText("Confirma tu correo institucional en los próximos 30 minutos: " + enlace + "?verificar=" + token);
+        mensaje.setTo(destino);
+        mensaje.setSubject(asunto);
+        mensaje.setText(instruccion + ":\n\n" + enlace + "?" + parametro + "=" + token
+                + "\n\nSi no solicitaste este enlace, puedes ignorar este mensaje.");
         try {
             correo.send(mensaje);
         } catch (MailException fallo) {
-            throw error(HttpStatus.SERVICE_UNAVAILABLE, "No se pudo enviar la verificación. Vuelve a intentarlo más tarde.");
+            throw error(HttpStatus.SERVICE_UNAVAILABLE, "No se pudo enviar el correo. Vuelve a intentarlo más tarde.");
         }
     }
 
-    void verificar(String valor) {
+    @Transactional
+    public void verificar(String valor, String clave) {
+        String hash = huella(valor);
+        Cuenta cuenta = db.sql("""
+                SELECT * FROM usuarios
+                WHERE token_hash=:hash AND token_vence>:ahora AND activo=TRUE AND verificado=FALSE FOR UPDATE
+                """).param("hash", hash).param("ahora", Timestamp.from(Instant.now()))
+                .query((rs, n) -> leerCuenta(rs)).optional().orElseThrow(ServicioCuentas::enlaceInvalido);
+        if (clave.getBytes(StandardCharsets.UTF_8).length > 72 || !claves.matches(clave, cuenta.clave)) {
+            throw error(HttpStatus.BAD_REQUEST, "La contraseña de registro es incorrecta.");
+        }
         int filas = db.sql("""
                 UPDATE usuarios SET verificado=TRUE, token_hash=NULL, token_vence=NULL
                 WHERE token_hash=:hash AND token_vence > :ahora AND activo=TRUE AND verificado=FALSE
-                """).param("hash", huella(valor)).param("ahora", java.sql.Timestamp.from(Instant.now())).update();
-        if (filas != 1) throw error(HttpStatus.BAD_REQUEST, "El enlace es inválido o venció. Solicita uno nuevo.");
+                """).param("hash", hash).param("ahora", Timestamp.from(Instant.now())).update();
+        if (filas != 1) throw enlaceInvalido();
+    }
+
+    private static org.springframework.web.server.ResponseStatusException enlaceInvalido() {
+        return error(HttpStatus.BAD_REQUEST, "El enlace es inválido o venció. Solicita uno nuevo.");
     }
 
     void salir(Perfil quien) {
@@ -207,7 +304,9 @@ class Cuentas {
                     @NotBlank @Size(max=72) String clave) {}
     record Credenciales(@NotBlank @Size(max=180) String correo, @NotBlank @Size(max=72) String clave) {}
     record Envio(@NotBlank @Size(max=180) String correo) {}
-    record Confirmacion(@NotBlank @jakarta.validation.constraints.Pattern(regexp="[A-Za-z0-9_-]{43}") String token) {}
+    record ClaveConToken(@NotBlank @jakarta.validation.constraints.Pattern(regexp="[A-Za-z0-9_-]{43}") String token,
+                            @NotBlank @Size(max=72) String clave) {}
+    record CambioClave(@NotBlank @Size(max=72) String anterior, @NotBlank @Size(max=72) String clave) {}
 
     private final ServicioCuentas servicio;
     Cuentas(ServicioCuentas servicio) { this.servicio = servicio; }
@@ -222,7 +321,18 @@ class Cuentas {
     void reenviar(@Valid @RequestBody Envio body) { servicio.reenviar(body.correo); }
 
     @PostMapping("/verificar") @ResponseStatus(HttpStatus.NO_CONTENT)
-    void verificar(@Valid @RequestBody Confirmacion body) { servicio.verificar(body.token); }
+    void verificar(@Valid @RequestBody ClaveConToken body) { servicio.verificar(body.token, body.clave); }
+
+    @PostMapping("/recuperar") @ResponseStatus(HttpStatus.ACCEPTED)
+    void recuperar(@Valid @RequestBody Envio body) { servicio.recuperar(body.correo); }
+
+    @PostMapping("/restablecer") @ResponseStatus(HttpStatus.NO_CONTENT)
+    void restablecer(@Valid @RequestBody ClaveConToken body) { servicio.restablecer(body.token, body.clave); }
+
+    @PostMapping("/clave") @ResponseStatus(HttpStatus.NO_CONTENT)
+    void cambiarClave(@AuthenticationPrincipal Jwt token, @Valid @RequestBody CambioClave body) {
+        servicio.cambiarClave(token, body.anterior, body.clave);
+    }
 
     @GetMapping("/perfil")
     ServicioCuentas.Perfil perfil(@AuthenticationPrincipal Jwt token) { return servicio.actual(token); }

@@ -4,7 +4,12 @@ const base = import.meta.env.VITE_API_URL?.replace(/\/$/, '') ?? '';
 export const modoDemo = !base && !import.meta.env.DEV;
 
 export async function peticion(ruta, { metodo = 'GET', cuerpo, sesion } = {}) {
-  if (modoDemo) return demo(ruta, metodo, cuerpo, sesion?.perfil);
+  if (modoDemo) {
+    if (ruta.startsWith('/auth/') || !sesion?.perfil) {
+      throw new Error('El acceso institucional en línea está pendiente de conexión.');
+    }
+    return demo(ruta, metodo, cuerpo, sesion.perfil);
+  }
   let respuesta;
   try {
     respuesta = await fetch(base + '/api' + ruta, {

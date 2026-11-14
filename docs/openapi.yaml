@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Órbita Campus API
-  version: 0.3.0-rc.1
+  version: 0.3.0-rc.2
   description: API académica de solicitudes universitarias. El JWT se envía en Authorization y vence en 30 minutos.
 servers:
   - url: http://localhost:8080/api
@@ -38,7 +38,7 @@ paths:
         '429': { description: Demasiados intentos }
   /auth/verificar:
     post:
-      summary: Consumir enlace de un solo uso
+      summary: Confirmar el correo con el enlace de un solo uso y la contraseña del registro
       security: []
       requestBody:
         required: true
@@ -46,9 +46,10 @@ paths:
           application/json:
             schema:
               type: object
-              required: [token]
+              required: [token, clave]
               properties:
                 token: { type: string, pattern: '^[A-Za-z0-9_-]{43}$' }
+                clave: { type: string, minLength: 1, maxLength: 72, format: password }
       responses:
         '204': { description: Dirección verificada }
         '400': { $ref: '#/components/responses/Invalido' }
@@ -69,6 +70,57 @@ paths:
         '202': { description: Solicitud aceptada }
         '400': { $ref: '#/components/responses/Invalido' }
         '503': { description: Servicio de verificación no disponible }
+  /auth/recuperar:
+    post:
+      summary: Solicitar un enlace de restablecimiento válido por 30 minutos
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [correo]
+              properties:
+                correo: { $ref: '#/components/schemas/Correo' }
+      responses:
+        '202': { description: Solicitud aceptada }
+        '400': { $ref: '#/components/responses/Invalido' }
+        '503': { description: Servicio de correo no disponible }
+  /auth/restablecer:
+    post:
+      summary: Consumir el enlace y actualizar la contraseña
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, clave]
+              properties:
+                token: { type: string, pattern: '^[A-Za-z0-9_-]{43}$' }
+                clave: { type: string, minLength: 12, maxLength: 72, format: password }
+      responses:
+        '204': { description: Contraseña actualizada y sesiones revocadas }
+        '400': { $ref: '#/components/responses/Invalido' }
+  /auth/clave:
+    post:
+      summary: Cambiar la contraseña desde una sesión vigente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [anterior, clave]
+              properties:
+                anterior: { type: string, minLength: 1, maxLength: 72, format: password }
+                clave: { type: string, minLength: 12, maxLength: 72, format: password }
+      responses:
+        '204': { description: Contraseña actualizada y sesiones revocadas }
+        '400': { $ref: '#/components/responses/Invalido' }
+        '401': { $ref: '#/components/responses/NoAutorizado' }
   /auth/perfil:
     get:
       summary: Consultar perfil autenticado

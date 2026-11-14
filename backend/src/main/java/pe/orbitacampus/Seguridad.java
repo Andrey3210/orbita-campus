@@ -86,7 +86,7 @@ class Seguridad {
                 .authorizeHttpRequests(a -> a
                         .requestMatchers("/actuator/health", "/actuator/info", "/error").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/registro", "/api/auth/login",
-                                "/api/auth/verificar", "/api/auth/reenviar").permitAll()
+                                "/api/auth/verificar", "/api/auth/reenviar", "/api/auth/recuperar", "/api/auth/restablecer").permitAll()
                         .requestMatchers("/actuator/metrics", "/actuator/metrics/**").access((autenticacion, contexto) -> {
                             if (autenticacion.get() instanceof JwtAuthenticationToken jwt) {
                                 try {
@@ -141,7 +141,8 @@ class Seguridad {
     FilterRegistrationBean<OncePerRequestFilter> limitarAcceso() {
         record Ventana(long vence, int intentos) {}
         var ventanas = new ConcurrentHashMap<String, Ventana>();
-        var rutas = Set.of("/api/auth/login", "/api/auth/registro", "/api/auth/reenviar", "/api/auth/verificar");
+        var rutas = Set.of("/api/auth/login", "/api/auth/registro", "/api/auth/reenviar", "/api/auth/verificar",
+                "/api/auth/recuperar", "/api/auth/restablecer", "/api/auth/clave");
         var filtro = new OncePerRequestFilter() {
             @Override
             protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)

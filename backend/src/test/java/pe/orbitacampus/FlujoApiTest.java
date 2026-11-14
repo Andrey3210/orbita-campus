@@ -104,14 +104,42 @@ class FlujoApiTest {
     private String registrar(String correo) throws Exception {
         correcto("POST","/auth/registro",null,Map.of("nombre","Persona de prueba","correo",correo,"clave",CLAVE),202);
         correcto("POST","/auth/login",null,Map.of("correo",correo,"clave",CLAVE),403);
+        String token = tokenCorreo(correo, "verificar");
+        correcto("POST","/auth/verificar",null,Map.of("token",token,"clave",CLAVE),204);
+        correcto("POST","/auth/verificar",null,Map.of("token",token,"clave",CLAVE),400);
+        return login(correo);
+    }
+
+    @Test void restableceYCambiaClaveRevocandoSesiones() throws Exception {
+        String correo = "recuperacion." + java.util.UUID.randomUUID().toString().substring(0,8) + "@unmsm.edu.pe";
+        String sesion = registrar(correo);
+        correcto("POST","/auth/recuperar",null,Map.of("correo","externo@example.com"),400);
+        correcto("POST","/auth/recuperar",null,Map.of("correo","inexistente."+correo),202);
+        correcto("POST","/auth/recuperar",null,Map.of("correo",correo),202);
+        String token = tokenCorreo(correo, "restablecer");
+        String nueva = "NuevaClavePruebas23";
+        correcto("POST","/auth/restablecer",null,Map.of("token",token,"clave","corta"),400);
+        correcto("POST","/auth/restablecer",null,Map.of("token",token,"clave",nueva),204);
+        correcto("POST","/auth/restablecer",null,Map.of("token",token,"clave",CLAVE),400);
+        correcto("GET","/auth/perfil",sesion,null,401);
+        correcto("POST","/auth/login",null,Map.of("correo",correo,"clave",CLAVE),401);
+        String posterior = cuerpo(correcto("POST","/auth/login",null,Map.of("correo",correo,"clave",nueva),200)).path("token").asText();
+        correcto("POST","/auth/clave",null,Map.of("anterior",nueva,"clave",CLAVE),401);
+        correcto("POST","/auth/clave",posterior,Map.of("anterior",CLAVE,"clave","OtraClaveSegura2"),400);
+        correcto("POST","/auth/clave",posterior,Map.of("anterior",nueva,"clave",CLAVE),204);
+        correcto("GET","/auth/perfil",posterior,null,401);
+        assertThat(login(correo)).isNotBlank();
+    }
+
+    private String tokenCorreo(String correo, String parametro) {
         var mensajes=ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mail,atLeastOnce()).send(mensajes.capture());
-        String enlace=mensajes.getAllValues().stream().filter(m -> m.getTo()[0].equals(correo)).findFirst().orElseThrow().getText();
-        String verificacion=enlace.substring(enlace.indexOf("https://"));
-        String token=URI.create(verificacion).getFragment().split("verificar=")[1];
-        correcto("POST","/auth/verificar",null,Map.of("token",token),204);
-        correcto("POST","/auth/verificar",null,Map.of("token",token),400);
-        return login(correo);
+        String consulta = "?" + parametro + "=";
+        String enlace = mensajes.getAllValues().stream().filter(m -> m.getTo()[0].equals(correo))
+                .flatMap(m -> m.getText().lines()).filter(linea -> linea.startsWith("https://") && linea.contains(consulta))
+                .findFirst().orElseThrow();
+        String fragmento = URI.create(enlace).getFragment();
+        return fragmento.substring(fragmento.indexOf(consulta) + consulta.length());
     }
 
     private String login(String correo) throws Exception {

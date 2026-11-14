@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { modoDemo, peticion } from './api.js';
-import { perfiles } from './demo.js';
-import { agrupar, correoValido, indicadores, normalizar, proximo, roles, vencida } from './modelo.js';
+import { agrupar, indicadores, normalizar, proximo, roles, vencida } from './modelo.js';
 import { Administracion } from './administracion.jsx';
+import { Acceso, Marca, MiCuenta } from './cuenta.jsx';
 import './estilos.css';
 
 const pestañas = [
@@ -14,10 +14,14 @@ const pestañas = [
 const f = new Intl.DateTimeFormat('es-PE', { dateStyle: 'medium', timeStyle: 'short' });
 const fecha = (valor) => f.format(new Date(valor));
 const recurso = (ruta) => import.meta.env.BASE_URL + ruta;
-const claveSesion = 'orbita-campus-sesion';
+const claveSesion = 'orbita-campus-sesion-v2';
 
 function leerSesion() {
-  try { return JSON.parse(sessionStorage.getItem(claveSesion)); } catch { return null; }
+  try {
+    const sesion = JSON.parse(sessionStorage.getItem(claveSesion));
+    if (!sesion?.perfil?.nombre || !Object.hasOwn(roles, sesion.perfil.rol)) return null;
+    return (modoDemo ? !sesion.token : typeof sesion.token === 'string' && sesion.token) ? sesion : null;
+  } catch { return null; }
 }
 
 function fragmento() {
@@ -28,103 +32,6 @@ function Aviso({ error, cargando }) {
   if (error) return <p className="aviso error" role="alert">{error}</p>;
   if (cargando) return <p className="aviso" role="status">Cargando datos…</p>;
   return null;
-}
-
-function Cuenta({ sesion, onSesion, avisar }) {
-  const [modo, setModo] = useState('login');
-  const [ocupado, setOcupado] = useState(false);
-  const token = new URLSearchParams(location.hash.split('?')[1]).get('verificar');
-  const [confirmado, setConfirmado] = useState(false);
-
-  async function confirmar() {
-    setOcupado(true);
-    try {
-      if (!/^[A-Za-z0-9_-]{43}$/.test(token)) throw new Error('El enlace de verificación es inválido.');
-      await peticion('/auth/verificar', { metodo: 'POST', cuerpo: { token } });
-      history.replaceState(null, '', '#cuenta');
-      setConfirmado(true);
-      avisar('');
-    } catch (error) { avisar(error.message); }
-    finally { setOcupado(false); }
-  }
-
-  async function enviar(evento) {
-    evento.preventDefault();
-    const datos = Object.fromEntries(new FormData(evento.currentTarget));
-    if (!correoValido(datos.correo)) return avisar('Escribe un correo válido como ejemplo@unmsm.edu.pe.');
-    datos.correo = datos.correo.trim().toLowerCase();
-    if (modo === 'registro' && (!/\p{L}/u.test(datos.clave) || !/\p{N}/u.test(datos.clave)
-        || new TextEncoder().encode(datos.clave).length > 72)) {
-      return avisar('La contraseña necesita al menos una letra, un número y hasta 72 bytes.');
-    }
-    setOcupado(true);
-    try {
-      const respuesta = await peticion('/auth/' + modo, { metodo: 'POST', cuerpo: datos });
-      avisar('');
-      if (modo === 'login') {
-        onSesion(respuesta);
-        location.hash = 'inicio';
-      } else {
-        setModo('login');
-        setConfirmado('Si corresponde, recibirás un enlace de verificación en tu correo.');
-      }
-    } catch (error) { avisar(error.message); }
-    finally { setOcupado(false); }
-  }
-
-  async function salir() {
-    setOcupado(true);
-    try {
-      await peticion('/auth/salir', { metodo: 'POST', sesion });
-      onSesion(null);
-      avisar('');
-    } catch (error) { avisar(error.message); }
-    finally { setOcupado(false); }
-  }
-
-  if (modoDemo) return <section className="panel cuenta">
-    <h2>Perfiles de demostración</h2>
-    <p>Los cambios de esta sesión se guardan en el navegador. El sistema real valida el correo institucional y los permisos en la API.</p>
-    <div className="perfiles">{perfiles.map((perfil) => <button className="perfil" key={perfil.id}
-      aria-pressed={sesion?.perfil.id === perfil.id} type="button"
-      onClick={() => { onSesion({ perfil }); location.hash = 'inicio'; }}>
-      <strong>{roles[perfil.rol]}</strong><span>{perfil.nombre}</span>
-    </button>)}</div>
-    <a className="enlace" href="https://github.com/Andrey3210/orbita-campus#ejecutar-con-mysql">Ejecutar con la API →</a>
-  </section>;
-
-  if (token) return <section className="panel cuenta">
-    <h2>Verifica tu correo institucional</h2>
-    <p>Confirma esta dirección antes de iniciar sesión.</p>
-    <button className="primario" disabled={ocupado} onClick={confirmar}>Confirmar correo</button>
-  </section>;
-
-  if (sesion) return <section className="panel cuenta">
-    <h2>{sesion.perfil.nombre}</h2><p>{sesion.perfil.correo} · {roles[sesion.perfil.rol]}</p>
-    <button className="secundario" disabled={ocupado} onClick={salir}>Cerrar sesión</button>
-  </section>;
-
-  const titulos = { login: 'Iniciar sesión', registro: 'Crear cuenta', reenviar: 'Reenviar verificación' };
-  return <section className="panel cuenta">
-    <h2>{titulos[modo]}</h2>
-    <p>Usa tu correo institucional de la Universidad Nacional Mayor de San Marcos.</p>
-    {confirmado && <p className="aviso" role="status">{confirmado === true ? 'Correo verificado. Ya puedes iniciar sesión.' : confirmado}</p>}
-    <form key={modo} className="formulario" onSubmit={enviar}>
-      {modo === 'registro' && <label>Nombre completo<input name="nombre" minLength={2} maxLength={100} required autoComplete="name" /></label>}
-      <label>Correo institucional<input name="correo" type="email" maxLength={180} required
-        placeholder="ejemplo@unmsm.edu.pe" autoComplete="email" onBlur={(e) => {
-          const campo = e.currentTarget;
-          campo.setCustomValidity(campo.value && !correoValido(campo.value) ? 'Usa un correo válido como ejemplo@unmsm.edu.pe.' : '');
-        }} onInput={(e) => e.currentTarget.setCustomValidity('')} /></label>
-      {modo !== 'reenviar' && <label>Contraseña<input name="clave" type="password" required maxLength={72}
-        minLength={modo === 'registro' ? 12 : undefined} autoComplete={modo === 'registro' ? 'new-password' : 'current-password'} /></label>}
-      <button className="primario" disabled={ocupado}>{titulos[modo]}</button>
-    </form>
-    <div className="acciones">
-      {Object.entries(titulos).filter(([clave]) => clave !== modo).map(([clave, texto]) =>
-        <button className="enlace" key={clave} onClick={() => { setModo(clave); avisar(''); }}>{texto}</button>)}
-    </div>
-  </section>;
 }
 
 function Estado({ dato, catalogos }) {
@@ -152,7 +59,7 @@ function Barras({ datos, catalogos, titulo }) {
   </section>;
 }
 
-function Inicio({ solicitudes, catalogos, seleccionar, sesion }) {
+function Inicio({ solicitudes, catalogos, seleccionar }) {
   const datos = indicadores(solicitudes);
   const dias = Array.from({ length: 7 }, (_, i) => {
     const dia = new Date();
@@ -163,25 +70,24 @@ function Inicio({ solicitudes, catalogos, seleccionar, sesion }) {
   const maximo = Math.max(1, ...dias.map((dia) => dia.total));
   const segmentos = agrupar(solicitudes, 'categoria');
   let angulo = 0;
-  const tonos = ['#b57454', '#759a83', '#c6a349', '#9f7893'];
+  const tonos = ['#38619b', '#468979', '#aa7d3d', '#777eaa'];
   const paradas = segmentos.map(([, cantidad], i) => {
     const anterior = angulo;
     angulo += cantidad / datos.total * 180;
     return tonos[i % tonos.length] + ' ' + anterior + 'deg ' + angulo + 'deg';
   });
   return <>
-    <div className="titular"><div><h1>Hola{sesion ? ', ' + sesion.perfil.nombre.split(' ')[0] : ''}</h1>
-      <p>Solicitudes y servicios de San Marcos</p></div><a className="primario" href={sesion ? '#solicitudes' : '#cuenta'}>
-        {sesion ? 'Ver solicitudes' : 'Iniciar sesión'} <span aria-hidden="true">↗</span></a></div>
-    {!sesion && <p className="aviso">Inicia sesión con tu correo institucional para consultar y registrar solicitudes.</p>}
+    <div className="titular"><div><h1>Servicios universitarios</h1>
+      <p>Resumen de las solicitudes y su atención</p></div><a className="primario" href="#solicitudes">
+        Ver solicitudes <span aria-hidden="true">↗</span></a></div>
     <div className="tablero">
       <div className="pila">
         <section className="resumen-principal"><div><strong>Solicitudes registradas</strong>
           <div className="cifra">{datos.total}</div><p>{datos.abiertas} abiertas · {datos.resueltas} atendidas</p></div>
-          <img src={recurso('mascota.webp')} alt="" /></section>
+          <img src={recurso('campus-tablero.jpg')} alt="" /></section>
         <div className="mini-grid">
           <div className="panel mini"><span className="insignia verde" aria-hidden="true">↗</span><div><small>Resolución</small><strong>{datos.tasa}%</strong></div></div>
-          <div className="panel mini"><span className="insignia terracota" aria-hidden="true">◷</span><div><small>Vencidas</small><strong>{datos.vencidas}</strong></div></div>
+          <div className="panel mini"><span className="insignia dorada" aria-hidden="true">◷</span><div><small>Vencidas</small><strong>{datos.vencidas}</strong></div></div>
         </div>
       </div>
       <section className="panel categorias"><h2>Por categoría</h2><div className="categorias-contenido">
@@ -354,7 +260,8 @@ function Estadisticas({ solicitudes, catalogos }) {
 const catalogoVacio = { estados: [], prioridades: [], categorias: [] };
 function App() {
   const [ruta, setRuta] = useState(fragmento);
-  const [sesion, setSesion] = useState(() => leerSesion() ?? (modoDemo ? { perfil: perfiles[0] } : null));
+  const [sesion, setSesion] = useState(leerSesion);
+  const [mensajeAcceso, setMensajeAcceso] = useState('');
   const [catalogos, setCatalogos] = useState(catalogoVacio);
   const [solicitudes, setSolicitudes] = useState([]);
   const [tecnicos, setTecnicos] = useState([]);
@@ -365,13 +272,20 @@ function App() {
   const [cargando, setCargando] = useState(Boolean(sesion));
   const [ocupado, setOcupado] = useState(false);
   const seccion = ruta.split('?')[0];
-  const pagina = pestañas.some(([id]) => seccion === id) ? seccion : 'inicio';
   const admin = sesion?.perfil.rol === 'ADMIN';
+  const pagina = pestañas.some(([id]) => seccion === id && (id !== 'admin' || admin)) ? seccion : 'inicio';
   const gestor = admin || sesion?.perfil.rol === 'SUPERVISOR';
+  const enlaceCuenta = seccion === 'cuenta' && ruta.includes('?');
+
+  function expirarSesion() {
+    cambiarSesion(null);
+    setMensajeAcceso('Tu sesión expiró. Vuelve a iniciar sesión.');
+  }
 
   function cambiarSesion(valor) {
     if (valor) sessionStorage.setItem(claveSesion, JSON.stringify(valor));
     else sessionStorage.removeItem(claveSesion);
+    setMensajeAcceso('');
     setDetalle(null); setNueva(false); setError(''); setCatalogos(catalogoVacio);
     setSolicitudes([]); setTecnicos([]); setListaAdmin(null); setSesion(valor);
   }
@@ -402,8 +316,8 @@ function App() {
     setCargando(true);
     obtener().then((datos) => { if (vigente) aplicar(datos); }).catch((fallo) => {
       if (!vigente) return;
-      if (fallo.estado === 401) cambiarSesion(null);
-      setError(fallo.message);
+      if (fallo.estado === 401) expirarSesion();
+      else setError(fallo.message);
     }).finally(() => { if (vigente) setCargando(false); });
     return () => { vigente = false; };
   }, [sesion]);
@@ -418,8 +332,8 @@ function App() {
       }
       return sinRespuesta ? true : resultado;
     } catch (fallo) {
-      if (fallo.estado === 401) cambiarSesion(null);
-      setError(fallo.message);
+      if (fallo.estado === 401) expirarSesion();
+      else setError(fallo.message);
     } finally { setOcupado(false); }
   }
 
@@ -428,21 +342,26 @@ function App() {
     if (resultado) { setDetalle(resultado); setNueva(false); window.scrollTo(0, 0); }
   }
 
-  const nombre = sesion?.perfil.nombre;
+  if (!sesion || enlaceCuenta) {
+    const destino = ['solicitudes', 'seguimiento', 'estadisticas', 'admin'].includes(seccion) ? seccion : 'inicio';
+    return <Acceso ruta={ruta} onSesion={cambiarSesion} mensaje={mensajeAcceso} avisar={setMensajeAcceso} destino={destino} />;
+  }
+
+  const { nombre } = sesion.perfil;
   return <>
     <a className="salto" href="#contenido" onClick={(evento) => {
       evento.preventDefault();
       document.getElementById('contenido').focus();
     }}>Saltar al contenido</a>
     <aside className="navegacion" aria-label="Barra principal">
-      <a className="marca" href="#inicio"><img src={recurso('icono.png')} width="38" height="38" alt="" />Órbita Campus</a>
+      <Marca />
       <nav aria-label="Secciones principales">{pestañas.filter(([id]) => id !== 'admin' || admin).map(([id, texto, icono]) =>
         <a key={id} href={'#' + id} aria-current={pagina === id ? 'page' : undefined}><span aria-hidden="true">{icono}</span>{texto}</a>)}</nav>
       <small>UNMSM · Taller de Software Web</small>
     </aside>
     <div className="espacio">
       <header className="cabecera">
-        <a className="marca marca-movil" href="#inicio"><img src={recurso('icono.png')} width="32" height="32" alt="" />Órbita Campus</a>
+        <Marca movil />
         <span className={'modo ' + (modoDemo ? 'etiqueta-demo' : '')}>{modoDemo ? 'Demo interactiva' : 'Servicios UNMSM'}</span>
         <a className="secundario" href="#cuenta">{nombre ? roles[sesion.perfil.rol] + ' · ' + nombre.split(' ')[0] : 'Mi cuenta'}</a>
       </header>
@@ -450,11 +369,11 @@ function App() {
         <Aviso error={error} cargando={cargando || ocupado} />
         {error && !cargando && !ocupado && sesion && <button className="enlace reintentar" onClick={() => ejecutar(async () => aplicar(await obtener()))}>Actualizar datos</button>}
         {pagina === 'cuenta'
-          ? <><div className="titular"><div><h1>Cuenta</h1><p>Acceso al sistema de servicios universitarios</p></div></div><Cuenta sesion={sesion} onSesion={cambiarSesion} avisar={setError} /></>
+          ? <><div className="titular"><div><h1>Mi cuenta</h1><p>Perfil y seguridad</p></div></div>
+            <MiCuenta sesion={sesion} onSesion={cambiarSesion} avisar={setMensajeAcceso} /></>
           : detalle ? <Detalle key={detalle.solicitud.id + ':' + detalle.solicitud.version} detalle={detalle} catalogos={catalogos} tecnicos={tecnicos}
             sesion={sesion} ocupado={ocupado} ejecutar={ejecutar} cambiar={setDetalle} cerrar={() => { setDetalle(null); location.hash = 'solicitudes'; }} />
-          : pagina === 'inicio' ? <Inicio solicitudes={solicitudes} catalogos={catalogos} seleccionar={seleccionar} sesion={sesion} />
-          : !sesion ? <section className="panel cuenta"><h1>Inicia sesión</h1><p>Entra con tu correo UNMSM para consultar esta sección.</p><a className="primario" href="#cuenta">Abrir cuenta</a></section>
+          : pagina === 'inicio' ? <Inicio solicitudes={solicitudes} catalogos={catalogos} seleccionar={seleccionar} />
           : pagina === 'solicitudes' && nueva ? <Nueva catalogos={catalogos} ocupado={ocupado} ejecutar={ejecutar} cerrar={(id) => { setNueva(false); if (id) void seleccionar(id); }} />
           : pagina === 'solicitudes' ? <Listado solicitudes={solicitudes} catalogos={catalogos} seleccionar={seleccionar}
             estudiante={sesion.perfil.rol === 'ESTUDIANTE'} abrir={() => setNueva(true)} />
