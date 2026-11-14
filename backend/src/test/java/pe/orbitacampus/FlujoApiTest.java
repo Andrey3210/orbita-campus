@@ -30,7 +30,8 @@ import static org.mockito.Mockito.verify;
         "spring.datasource.username=sa", "spring.datasource.password=",
         "campus.jwt-secret=clave-aislada-para-test-con-mas-de-treinta-y-dos-bytes",
         "campus.admin-email=admin.pruebas@unmsm.edu.pe", "campus.admin-password=PasswordPruebas1",
-        "campus.mail-from=test@example.invalid", "campus.verification-link=https://example.invalid/#cuenta"
+        "campus.mail-from=test@example.invalid", "campus.verification-link=https://example.invalid/#cuenta",
+        "campus.origins=https://andrey3210.github.io"
 })
 class FlujoApiTest {
     private static final String CLAVE = "PasswordPruebas1";
@@ -56,6 +57,19 @@ class FlujoApiTest {
         for (String url : List.of("javascript:alert(1)", "http://example.com/foto", "https://a:b@example.com")) {
             assertThatThrownBy(() -> Reglas.evidencia(url)).isInstanceOf(ResponseStatusException.class);
         }
+    }
+
+    @Test void autorizaElOrigenDePagesEnLaConsultaPrevia() {
+        var cabeceras = new HttpHeaders();
+        cabeceras.setOrigin("https://andrey3210.github.io");
+        cabeceras.setAccessControlRequestMethod(HttpMethod.POST);
+        cabeceras.setAccessControlRequestHeaders(List.of("content-type", "authorization"));
+        var permitida = http.exchange("/api/auth/login", HttpMethod.OPTIONS, new HttpEntity<>(cabeceras), String.class);
+        assertThat(permitida.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(permitida.getHeaders().getAccessControlAllowOrigin()).isEqualTo("https://andrey3210.github.io");
+        cabeceras.setOrigin("https://otro.example");
+        var rechazada = http.exchange("/api/auth/login", HttpMethod.OPTIONS, new HttpEntity<>(cabeceras), String.class);
+        assertThat(rechazada.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test void verificaCorreoYRecorreAtencionConPermisos() throws Exception {

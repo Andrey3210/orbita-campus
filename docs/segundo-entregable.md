@@ -1,6 +1,6 @@
 # Segundo entregable · Órbita Campus
 
-Versión candidata **v0.3.0-rc.4** para el Taller de Construcción de Software Web de la UNMSM.
+Versión candidata **v0.3.0-rc.5** para el Taller de Construcción de Software Web de la UNMSM.
 
 [Descargar informe PDF desde Pages](https://andrey3210.github.io/orbita-campus/Informe-segundo-entregable.pdf)
 

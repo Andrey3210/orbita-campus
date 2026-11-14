@@ -1,5 +1,9 @@
 # Historial de versiones
 
+## 0.3.0-rc.5
+
+- Autoriza explícitamente el origen de GitHub Pages en la conexión con la API.
+
 ## 0.3.0-rc.4
 
 - Configuración de despliegue de la API con MySQL en Railway y comprobación de disponibilidad desde GitHub Pages.

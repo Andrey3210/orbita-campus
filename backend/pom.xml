@@ -10,7 +10,7 @@
   </parent>
   <groupId>pe.orbitacampus</groupId>
   <artifactId>orbita-campus</artifactId>
-  <version>0.3.0-rc.4</version>
+  <version>0.3.0-rc.5</version>
   <properties><java.version>17</java.version></properties>
   <dependencies>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
