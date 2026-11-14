@@ -136,7 +136,7 @@ function Nueva({ catalogos, ejecutar, cerrar, ocupado }) {
     <h2>Nueva solicitud</h2>
     <form className="formulario" onSubmit={guardar}>
       <label>Asunto<input required name="titulo" minLength={5} maxLength={120} placeholder="Describe el problema en una línea" /></label>
-      <label>Categoría<select name="categoriaId" required defaultValue=""><option value="" disabled>Elige una categoría</option>
+      <label>Categoría<select name="categoriaId" aria-label="Categoría" required defaultValue=""><option value="" disabled>Elige una categoría</option>
         {catalogos.categorias.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></label>
       <label>Ubicación<input name="ubicacion" required minLength={3} maxLength={150} placeholder="Facultad, pabellón o aula" /></label>
       <label>Descripción<textarea name="descripcion" required minLength={10} maxLength={2000} rows={4} /></label>
@@ -228,14 +228,14 @@ function Detalle({ detalle, catalogos, tecnicos, sesion, ocupado, ejecutar, camb
     </section>
     {(siguiente || supervisor && abierta) && <section className="panel"><h2>Gestionar atención</h2>
       <form className="formulario" onSubmit={actualizar}>
-        <label>Estado<select value={destino} onChange={(e) => setDestino(e.target.value)}>
+        <label>Estado<select aria-label="Estado" value={destino} onChange={(e) => setDestino(e.target.value)}>
           {catalogos.estados.filter((e) => e.clave === siguiente || (supervisor && abierta && e.clave === s.estado))
             .map((e) => <option key={e.clave} value={e.clave}>{e.nombre}</option>)}
         </select></label>
         {supervisor && abierta && <label>Prioridad<select name="prioridad" defaultValue={s.prioridad}>
           {catalogos.prioridades.map((p) => <option key={p.clave} value={p.clave}>{p.nombre} · {p.horas} h</option>)}
         </select></label>}
-        {asignar && <label>Técnico responsable<select name="responsableId" required defaultValue={s.responsableId ?? ''}>
+        {asignar && <label>Técnico responsable<select name="responsableId" aria-label="Técnico responsable" required defaultValue={s.responsableId ?? ''}>
           <option value="" disabled>Selecciona un técnico</option>{tecnicos.map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}</select></label>}
         <button className="primario" disabled={ocupado}>Guardar cambios</button>
       </form></section>}

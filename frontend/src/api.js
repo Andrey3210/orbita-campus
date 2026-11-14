@@ -20,7 +20,10 @@ export async function peticion(ruta, { metodo = 'GET', cuerpo, sesion } = {}) {
   }
   if (!respuesta.ok) {
     const datos = await respuesta.json().catch(() => ({}));
-    throw Object.assign(new Error(datos.mensaje ?? 'La solicitud no pudo completarse.'), { estado: respuesta.status });
+    const referencia = respuesta.headers.get('X-Request-Id');
+    const mensaje = datos.mensaje ?? 'La solicitud no pudo completarse.';
+    const detalle = respuesta.status >= 500 && referencia ? mensaje + ' Referencia para soporte: ' + referencia : mensaje;
+    throw Object.assign(new Error(detalle), { estado: respuesta.status });
   }
   return [202, 204].includes(respuesta.status) || respuesta.headers.get('content-length') === '0'
     ? undefined
