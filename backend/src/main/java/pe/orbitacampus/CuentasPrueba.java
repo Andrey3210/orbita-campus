@@ -47,7 +47,7 @@ class CuentasPrueba implements ApplicationRunner {
         return false;
     }
 
-    private static String direccion(Reglas.Rol rol) {
+    static String direccion(Reglas.Rol rol) {
         return "orbita.campus.g7." + rol.name().toLowerCase(Locale.ROOT) + "@unmsm.edu.pe";
     }
 }
