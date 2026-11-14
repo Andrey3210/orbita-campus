@@ -2,6 +2,7 @@ package pe.orbitacampus;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +15,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,12 +23,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
-@Profile("datos-evaluacion")
+@Profile({"datos-evaluacion", "historial-grupo7"})
 @Order
 class DatosEvaluacion implements ApplicationRunner {
     record Cuenta(String nombre, String correo, String clave, Reglas.Rol rol) {}
     record Caso(String titulo, String categoria, String lugar, String descripcion, String revision, String solucion) {}
     private record Perfil(long id, Reglas.Rol rol) {}
+    private record Autores(long estudiante, long tecnico, long supervisor, long administrador) {}
 
     private static final List<Caso> CASOS = List.of(
         new Caso("Falla de proyección en aula de cómputo", "Soporte informático", "Pabellón de Sistemas, aula 203",
@@ -49,22 +52,31 @@ class DatosEvaluacion implements ApplicationRunner {
             "Coordinar la revisión de los anclajes y aislar el banco durante el trabajo.", "Se fijaron los anclajes y se retiró la señalización.")
     );
     private static final List<String> PRIORIDADES = List.of("MEDIA", "ALTA", "URGENTE", "BAJA");
+    private static final ZoneId LIMA = ZoneId.of("America/Lima");
+    private static final List<Integer> DIAS_HISTORIAL = List.of(0, 1, 2, 3, 4, 5, 6, 8, 10, 13, 16, 19, 22, 26, 30, 34, 39, 45);
     private final JdbcClient db;
     private final ObjectMapper json;
     private final PasswordEncoder claves;
     private final String manifiesto;
+    private final Environment entorno;
 
-    DatosEvaluacion(JdbcClient db, ObjectMapper json, PasswordEncoder claves,
+    DatosEvaluacion(JdbcClient db, ObjectMapper json, PasswordEncoder claves, Environment entorno,
                     @Value("${EVALUACION_CUENTAS:}") String manifiesto) {
         this.db = db;
         this.json = json;
         this.claves = claves;
+        this.entorno = entorno;
         this.manifiesto = manifiesto;
     }
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) throws Exception {
+        if (entorno.matchesProfiles("datos-evaluacion")) cargarEvaluacion();
+        if (entorno.matchesProfiles("historial-grupo7")) cargarHistorial();
+    }
+
+    private void cargarEvaluacion() throws Exception {
         var usuarios = json.readValue(manifiesto, new TypeReference<List<Cuenta>>() {});
         if (usuarios.size() != 12 || usuarios.stream().map(Cuenta::correo).distinct().count() != 12
                 || usuarios.stream().map(Cuenta::clave).distinct().count() != 12) {
@@ -84,9 +96,38 @@ class DatosEvaluacion implements ApplicationRunner {
                 long estudiante = estudiantes.get(indice % estudiantes.size()).id();
                 long tecnico = tecnicos.get((estado.ordinal() + variante) % tecnicos.size()).id();
                 long supervisor = supervisores.get(variante % supervisores.size()).id();
-                cargar(caso, estado, variante, indice++, estudiante, tecnico, supervisor, ahora);
+                Instant creada = ahora.minus(5L + (indice * 13L) % 150, ChronoUnit.HOURS);
+                String titulo = "[G7-%02d] %s".formatted(++indice, caso.titulo());
+                cargar(caso, estado, variante, titulo, new Autores(estudiante, tecnico, supervisor, supervisor),
+                        creada, 3L + variante);
             }
         }
+    }
+
+    private void cargarHistorial() {
+        var autores = new Autores(cuentaExistente(Reglas.Rol.ESTUDIANTE), cuentaExistente(Reglas.Rol.TECNICO),
+                cuentaExistente(Reglas.Rol.SUPERVISOR), cuentaExistente(Reglas.Rol.ADMIN));
+        Instant ahora = Instant.now();
+        var hoy = ahora.atZone(LIMA).toLocalDate();
+        var estados = Reglas.Estado.values();
+        for (int i = 0; i < DIAS_HISTORIAL.size(); i++) {
+            var estado = estados[(i + i / estados.length) % estados.length];
+            var caso = CASOS.get((i + 2 * (i / estados.length)) % CASOS.size());
+            int variante = i % PRIORIDADES.size();
+            String titulo = "[HIST-G7-%02d] %s".formatted(i + 1, caso.titulo());
+            Instant creada = i == 0 ? ahora : hoy.minusDays(DIAS_HISTORIAL.get(i))
+                    .atTime(8 + i % 5, 15).atZone(LIMA).toInstant();
+            var responsables = i % 2 == 0 ? autores
+                    : new Autores(autores.estudiante(), autores.tecnico(), autores.supervisor(), autores.supervisor());
+            cargar(caso, estado, variante, titulo, responsables, creada, 2L + i % 9);
+        }
+    }
+
+    private long cuentaExistente(Reglas.Rol rol) {
+        return db.sql("""
+                SELECT id FROM usuarios WHERE correo=:correo AND rol=:rol AND activo=TRUE AND verificado=TRUE FOR UPDATE
+                """).param("correo", CuentasPrueba.direccion(rol)).param("rol", rol.name()).query(Long.class).optional()
+                .orElseThrow(() -> new IllegalStateException("Falta una cuenta de evaluación activa para " + rol + "."));
     }
 
     private Perfil provisionar(Cuenta usuario) {
@@ -116,9 +157,12 @@ class DatosEvaluacion implements ApplicationRunner {
         return resultado;
     }
 
-    private void cargar(Caso caso, Reglas.Estado estado, int variante, int indice,
-                        long estudiante, long tecnico, long supervisor, Instant ahora) {
-        String titulo = "[G7-%02d] %s".formatted(indice + 1, caso.titulo());
+    private void cargar(Caso caso, Reglas.Estado estado, int variante, String titulo, Autores autores,
+                        Instant creada, long horasDeResolucion) {
+        long estudiante = autores.estudiante();
+        long tecnico = autores.tecnico();
+        long supervisor = autores.supervisor();
+        long gestor = autores.administrador();
         var anterior = db.sql("SELECT id FROM solicitudes WHERE usuario_id=:usuario AND titulo=:titulo")
                 .param("usuario", estudiante).param("titulo", titulo).query(Long.class).optional();
         if (anterior.isPresent()) return;
@@ -126,8 +170,7 @@ class DatosEvaluacion implements ApplicationRunner {
         long categoria = db.sql("SELECT id FROM categorias WHERE nombre=:nombre AND activo=TRUE")
                 .param("nombre", caso.categoria()).query(Long.class).single();
         int horas = db.sql("SELECT horas FROM prioridades WHERE clave=:clave").param("clave", prioridad).query(Integer.class).single();
-        Instant creada = ahora.minus(5L + (indice * 13L) % 150, ChronoUnit.HOURS);
-        Instant resuelta = estado.terminada() ? creada.plus(3L + variante, ChronoUnit.HOURS) : null;
+        Instant resuelta = estado.terminada() ? creada.plus(horasDeResolucion, ChronoUnit.HOURS) : null;
         var key = new GeneratedKeyHolder();
         db.sql("""
                 INSERT INTO solicitudes(usuario_id,categoria_id,responsable_id,titulo,descripcion,ubicacion,prioridad,estado,creada,vence,resuelta)
@@ -140,11 +183,12 @@ class DatosEvaluacion implements ApplicationRunner {
                 .param("resuelta", resuelta == null ? null : Timestamp.from(resuelta)).update(key);
         long id = Objects.requireNonNull(key.getKey()).longValue();
         evento(id, estudiante, "ESTADO", "Se registró la solicitud.", creada);
-        evento(id, estudiante, "COMENTARIO", caso.descripcion(), creada.plusSeconds(300));
+        evento(id, estudiante, "COMENTARIO", caso.descripcion(),
+                estado == Reglas.Estado.REGISTRADA ? creada : creada.plusSeconds(300));
         if (estado.ordinal() >= 1) {
             evento(id, supervisor, "ESTADO", "Estado: EVALUACION.", creada.plusSeconds(1200));
             evento(id, supervisor, "COMENTARIO", caso.revision(), creada.plusSeconds(1500));
-            if (!prioridad.equals("MEDIA")) evento(id, supervisor, "PRIORIDAD", "Prioridad: " + prioridad + ".", creada.plusSeconds(1800));
+            if (!prioridad.equals("MEDIA")) evento(id, gestor, "PRIORIDAD", "Prioridad: " + prioridad + ".", creada.plusSeconds(1800));
         }
         if (estado.ordinal() >= 2) {
             evento(id, supervisor, "ESTADO", "Estado: ASIGNADA.", creada.plusSeconds(2400));
@@ -152,7 +196,7 @@ class DatosEvaluacion implements ApplicationRunner {
         }
         if (estado.ordinal() >= 3) evento(id, tecnico, "ESTADO", "Estado: ATENCION.", creada.plusSeconds(3600));
         if (resuelta != null) evento(id, tecnico, "ESTADO", "Estado: RESUELTA. " + caso.solucion(), resuelta);
-        if (estado == Reglas.Estado.CERRADA) evento(id, supervisor, "ESTADO", "Estado: CERRADA. El área responsable confirmó la atención.", resuelta.plusSeconds(600));
+        if (estado == Reglas.Estado.CERRADA) evento(id, gestor, "ESTADO", "Estado: CERRADA. El área responsable confirmó la atención.", resuelta.plusSeconds(600));
     }
 
     private void evento(long id, long autor, String tipo, String texto, Instant fecha) {

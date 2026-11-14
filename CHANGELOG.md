@@ -1,5 +1,10 @@
 # Historial de versiones
 
+## 1.0.1
+
+- Barra móvil con desplazamiento táctil, enlaces a fichas, filtros de solicitudes y ajustes de accesibilidad.
+- Carga de dieciocho solicitudes de evaluación para cuatro cuentas existentes, con fechas distribuidas en 45 días y eventos por rol.
+
 ## 1.0.0
 
 - Pruebas de aceptación en navegador, SAST, DAST y carga y estrés sobre un entorno MySQL aislado.
