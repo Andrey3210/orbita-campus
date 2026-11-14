@@ -10,6 +10,8 @@ async function entrar(page, rol) {
 }
 
 async function salir(page) {
+  const mas = page.getByRole('button', { name: 'Más', exact: true });
+  if (await mas.isVisible() && await mas.getAttribute('aria-expanded') === 'false') await mas.click();
   await page.getByRole('link', { name: 'Cuenta', exact: true }).click();
   await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Iniciar sesión', exact: true })).toBeVisible();
@@ -137,7 +139,7 @@ test('acceso y navegación con teclado en vista móvil', async ({ page }) => {
 
 test.use({ hasTouch: true });
 
-test('la barra inferior se desliza sin activar enlaces durante el gesto', async ({ page, context }) => {
+test('la barra móvil es fija y Más muestra las secciones del rol', async ({ page, context }) => {
   await page.setViewportSize({ width: 320, height: 750 });
   await entrar(page, 'ADMIN');
   const menu = page.getByRole('navigation', { name: 'Secciones principales' });
@@ -151,17 +153,35 @@ test('la barra inferior se desliza sin activar enlaces durante el gesto', async 
   }
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 
-  await expect.poll(() => menu.evaluate(nav => nav.scrollLeft)).toBeGreaterThan(100);
+  expect(await menu.evaluate(nav => nav.scrollLeft)).toBe(0);
   await expect(page).toHaveURL(/#inicio$/);
   expect(await page.locator('html').evaluate(html => html.scrollWidth)).toBe(320);
 
-  const administracion = menu.getByRole('link', { name: 'Administración', exact: true });
-  await expect(administracion).toBeInViewport({ ratio: 0.95 });
+  const mas = menu.getByRole('button', { name: 'Más', exact: true });
+  const opciones = menu.getByRole('group', { name: 'Más opciones' });
+  await expect(mas).toBeInViewport({ ratio: 0.95 });
+  await expect(opciones).toBeHidden();
+  await mas.tap();
+  await expect(mas).toHaveAttribute('aria-expanded', 'true');
+  await expect(opciones.getByRole('link')).toHaveText(['Indicadores', 'Administración', 'Cuenta']);
+  await page.keyboard.press('Tab');
+  await expect(opciones.getByRole('link', { name: 'Indicadores' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(mas).toBeFocused();
+  await expect(opciones).toBeHidden();
+  await mas.tap();
+  const administracion = opciones.getByRole('link', { name: 'Administración', exact: true });
   await administracion.tap();
   await expect(page.getByRole('heading', { name: 'Administración', exact: true })).toBeVisible();
-
-  await page.goto('/#cuenta');
-  await expect(menu.getByRole('link', { name: 'Cuenta', exact: true })).toBeInViewport({ ratio: 0.95 });
+  await expect(mas).toHaveAttribute('data-activo', 'true');
+  await expect(opciones).toBeHidden();
+  await mas.tap();
+  await page.getByRole('heading', { name: 'Administración', exact: true }).tap();
+  await expect(opciones).toBeHidden();
+  await salir(page);
+  await entrar(page, 'ESTUDIANTE');
+  await mas.tap();
+  await expect(opciones.getByRole('link')).toHaveText(['Indicadores', 'Cuenta']);
   await salir(page);
 });
 

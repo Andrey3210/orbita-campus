@@ -20,26 +20,53 @@ const claveSesion = 'orbita-campus-sesion-v2';
 
 function Navegacion({ pagina, admin }) {
   const barra = useRef(null);
+  const botonMas = useRef(null);
+  const [paginaConMenu, setPaginaConMenu] = useState(null);
+  const abierto = paginaConMenu === pagina;
+  const disponibles = pestañas.filter(([id]) => id !== 'admin' || admin);
+  const adicionales = disponibles.slice(3);
 
   useEffect(() => {
-    const menu = barra.current;
-    const activa = menu.querySelector('[aria-current="page"]');
-    if (!activa || menu.scrollWidth <= menu.clientWidth) return;
-
-    const visible = menu.getBoundingClientRect();
-    const enlace = activa.getBoundingClientRect();
-    if (enlace.left < visible.left || enlace.right > visible.right) {
-      menu.scrollTo({ left: menu.scrollLeft + enlace.left - visible.left - (visible.width - enlace.width) / 2 });
+    if (!abierto) return;
+    function cerrarFuera(evento) {
+      if (!barra.current.contains(evento.target)) setPaginaConMenu(null);
     }
-  }, [pagina, admin]);
+    function cerrarConTecla(evento) {
+      if (evento.key !== 'Escape') return;
+      setPaginaConMenu(null);
+      if (barra.current.contains(document.activeElement)) botonMas.current.focus();
+    }
+    function cerrarAlNavegar() { setPaginaConMenu(null); }
+    document.addEventListener('pointerdown', cerrarFuera);
+    document.addEventListener('keydown', cerrarConTecla);
+    window.addEventListener('hashchange', cerrarAlNavegar);
+    return () => {
+      document.removeEventListener('pointerdown', cerrarFuera);
+      document.removeEventListener('keydown', cerrarConTecla);
+      window.removeEventListener('hashchange', cerrarAlNavegar);
+    };
+  }, [abierto]);
+
+  function enlace([id, texto, icono], clase) {
+    return <a key={id} className={clase} href={'#' + id} aria-current={pagina === id ? 'page' : undefined}
+      onClick={() => setPaginaConMenu(null)}><span aria-hidden="true">{icono}</span>{texto}</a>;
+  }
 
   return <aside className="navegacion" aria-label="Barra principal">
     <Marca />
-    <nav ref={barra} aria-label="Secciones principales">
-      {pestañas.filter(([id]) => id !== 'admin' || admin).map(([id, texto, icono]) =>
-        <a key={id} href={'#' + id} aria-current={pagina === id ? 'page' : undefined}>
-          <span aria-hidden="true">{icono}</span>{texto}
-        </a>)}
+    <nav ref={barra} aria-label="Secciones principales"
+      onBlur={evento => { if (!barra.current.contains(evento.relatedTarget)) setPaginaConMenu(null); }}>
+      {disponibles.slice(0, 3).map(item => enlace(item))}
+      {adicionales.map(item => enlace(item, 'nav-escritorio'))}
+      <button type="button" ref={botonMas} className="nav-mas"
+        data-activo={adicionales.some(([id]) => id === pagina)}
+        aria-expanded={abierto} aria-controls="nav-opciones"
+        onClick={() => setPaginaConMenu(abierto ? null : pagina)}>
+        <span aria-hidden="true">☰</span>Más
+      </button>
+      <div id="nav-opciones" className="nav-opciones" role="group" aria-label="Más opciones" hidden={!abierto}>
+        {adicionales.map(item => enlace(item))}
+      </div>
     </nav>
     <small>UNMSM · Taller de Software Web</small>
   </aside>;
