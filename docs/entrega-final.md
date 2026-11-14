@@ -7,6 +7,7 @@ Versión **1.0.0** para el Taller de Construcción de Software Web de la UNMSM.
 - [Manual de usuario](manual-usuario.md) · [Manual técnico](manual-tecnico.md) · [Guion de sustentación](sustentacion.md)
 - [Contrato OpenAPI](openapi.yaml) · [Registro de uso de IA](registro-ia.md) · [Ejecuciones de calidad](https://github.com/Andrey3210/orbita-campus/actions/workflows/integracion.yml)
 - [Monitoreo de disponibilidad](https://github.com/Andrey3210/orbita-campus/actions/workflows/monitoreo.yml)
+- [Informe final en Drive](https://drive.google.com/file/d/1Igksxy_7uKhAOYAcLzEo3uE8jE8aLZQs/view) · [Plantilla para registrar validación con usuarios](validacion-usuarios.md)
 
 La fase IV agrega pruebas de aceptación de navegador, análisis estático con SpotBugs y FindSecBugs, pruebas DAST de caja negra y mediciones de carga, estrés y recuperación sobre MySQL. Las ejecuciones automatizadas conservan resultados que permiten identificar el escenario y la respuesta observada.
 

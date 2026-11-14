@@ -4,6 +4,7 @@ import { accesoDisponible, peticion } from './api.js';
 import { agrupar, indicadores, normalizar, proximo, roles, vencida } from './modelo.js';
 import { Administracion } from './administracion.jsx';
 import { Acceso, Marca, MiCuenta } from './cuenta.jsx';
+import { informeFinal } from './enlaces.js';
 import './estilos.css';
 
 const pestañas = [
@@ -398,7 +399,7 @@ function App() {
           : <Administracion datos={listaAdmin} ocupado={ocupado} ejecutar={ejecutar} perfil={sesion.perfil} />}
       </main>
       <footer><span>Órbita Campus · Segundo entregable</span><div className="acciones">
-        <a href={recurso('Informe-segundo-entregable.pdf')}>Informe PDF</a>
+        <a href={informeFinal}>Informe final PDF</a>
         <a href="https://github.com/Andrey3210/orbita-campus">Código y documentación</a>
       </div></footer>
     </div>

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { correoValido, roles } from './modelo.js';
 import { accesoDisponible, peticion } from './api.js';
+import { informeFinal } from './enlaces.js';
 
 const recurso = (ruta) => import.meta.env.BASE_URL + ruta;
-const informe = recurso('Informe-segundo-entregable.pdf');
 const repositorio = 'https://github.com/Andrey3210/orbita-campus';
 const modos = {
   login: ['Iniciar sesión', 'Entra con tu cuenta de Órbita Campus y tu correo institucional de San Marcos.'],
@@ -68,7 +68,7 @@ export function Acceso({ ruta, onSesion, mensaje, avisar, destino }) {
       <FormularioAcceso key={ruta} modo={modo} token={token} onSesion={onSesion}
         mensaje={mensaje} avisar={avisar} destino={destino} />
       <footer className="portal-pie"><span>Grupo 7 · Taller de Software Web</span>
-        <div><a href={informe}>Informe del proyecto</a><a href={repositorio}>GitHub</a></div>
+        <div><a href={informeFinal}>Informe del proyecto</a><a href={repositorio}>GitHub</a></div>
       </footer>
     </main>
     <figure className="portal-imagen">
