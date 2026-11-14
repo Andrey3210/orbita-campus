@@ -7,7 +7,7 @@ Proyecto académico para registrar y atender solicitudes de servicios universita
 - [Informe del segundo entregable (PDF)](docs/Informe-segundo-entregable.pdf)
 - [API OpenAPI](docs/openapi.yaml) · [Versiones](CHANGELOG.md) · [GitHub Actions](https://github.com/Andrey3210/orbita-campus/actions)
 
-El portal utiliza cuentas gestionadas por la API y almacenadas en MySQL. En Pages, el formulario se habilita cuando se configura el destino de la API.
+El portal publicado usa la API de Railway y guarda sus cuentas y solicitudes en MySQL. [Estado de la API pública](https://orbita-campus-production.up.railway.app/actuator/health)
 
 ## Ejecutar con MySQL
 
