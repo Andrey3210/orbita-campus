@@ -1,5 +1,11 @@
 # Historial de versiones
 
+## 0.3.0-rc.3
+
+- Acceso y permisos gestionados por la API en todo el portal.
+- Aprovisionamiento local de una cuenta de prueba por rol con contraseñas independientes.
+- Informe con capturas del entorno integrado con MySQL.
+
 ## 0.3.0-rc.2
 
 - Portada de acceso institucional, paleta azul y fotografías referenciales de espacios universitarios.

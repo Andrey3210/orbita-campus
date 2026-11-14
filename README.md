@@ -2,12 +2,12 @@
 
 Proyecto académico para registrar y atender solicitudes de servicios universitarios de la UNMSM. Conserva la estructura de tablero y navegación de [Órbita Finanzas](https://github.com/Andrey3210/orbita-finanzas) y utiliza una paleta institucional con imágenes generadas de espacios universitarios referenciales.
 
-- [Demostración en GitHub Pages](https://andrey3210.github.io/orbita-campus/)
+- [Portal en GitHub Pages](https://andrey3210.github.io/orbita-campus/)
 - [Segundo entregable](docs/segundo-entregable.md) · [Especificación y BDD](docs/especificacion.md) · [Registro de uso de IA](docs/registro-ia.md)
 - [Informe del segundo entregable (PDF)](docs/Informe-segundo-entregable.pdf)
 - [API OpenAPI](docs/openapi.yaml) · [Versiones](CHANGELOG.md) · [GitHub Actions](https://github.com/Andrey3210/orbita-campus/actions)
 
-Desde la portada de Pages, selecciona **Explorar la demostración** para probar el sistema con registros ficticios guardados en el navegador. Puedes cambiar entre cuatro perfiles desde **Mi cuenta**. En el entorno integrado, el sistema exige verificar el correo y controla los roles en el servidor.
+El portal utiliza cuentas gestionadas por la API y almacenadas en MySQL. En Pages, el formulario se habilita cuando se configura el destino de la API.
 
 ## Ejecutar con MySQL
 
@@ -18,13 +18,15 @@ Desde la portada de Pages, selecciona **Explorar la demostración** para probar 
 
 Si ya tienes MySQL, también puedes crear una base vacía, exportar `DB_URL`, `DB_USER`, `DB_PASSWORD` y las variables de seguridad del ejemplo. Luego ejecuta `mvn -f backend/pom.xml spring-boot:run`.
 
-## Recorrido de demostración
+## Recorrido de prueba
+
+En una instalación local puedes aprovisionar una cuenta por rol con el perfil Spring `pruebas-locales`. Exporta `PRUEBA_ESTUDIANTE_PASSWORD`, `PRUEBA_TECNICO_PASSWORD`, `PRUEBA_SUPERVISOR_PASSWORD` y `PRUEBA_ADMIN_PASSWORD`, cada una con una contraseña inicial distinta. Activa el perfil con `SPRING_PROFILES_ACTIVE=pruebas-locales` y ejecuta el backend directamente con Java o Maven. El perfil usa la interfaz local y crea las cuentas `orbita.campus.g7.<rol>@unmsm.edu.pe` como verificadas para la prueba. Las contraseñas iniciales solo se aplican durante el aprovisionamiento. Guarda las contraseñas fuera del repositorio. Usa este perfil con una base local de prueba.
 
 1. Como **Estudiante**, crea una solicitud con categoría, ubicación, descripción y una evidencia HTTPS opcional.
-2. Cambia a **Supervisor** desde Cuenta. Abre la solicitud, pásala a evaluación y luego asígnala a Sofía Demo.
-3. Cambia a **Técnico**. Abre la solicitud asignada, comienza la atención, añade un comentario y resuélvela.
-4. Vuelve a **Supervisor** para cerrarla. Revisa seguimiento, historial e indicadores.
-5. Como **Administrador**, revisa usuarios, roles, categorías, áreas, plazos y etiquetas de estado.
+2. Cierra sesión e ingresa como **Supervisor**. Abre la solicitud, pásala a evaluación y asígnala al técnico de prueba.
+3. Ingresa como **Técnico**. Abre la solicitud asignada, comienza la atención, añade un comentario y resuélvela.
+4. Vuelve a ingresar como **Supervisor** para cerrarla. Revisa seguimiento, historial e indicadores.
+5. Ingresa como **Administrador** para revisar usuarios, roles, categorías, áreas, plazos y etiquetas de estado.
 
 ## Seguridad y validaciones
 
