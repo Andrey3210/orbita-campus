@@ -49,7 +49,7 @@ test('aceptación de los cuatro perfiles y los seis estados', async ({ page }) =
   await page.reload();
   await expect(page.getByRole('heading', { name: asunto, exact: true })).toBeFocused();
   await page.getByRole('button', { name: /Volver a Solicitudes/ }).click();
-  const buscar = page.getByRole('searchbox', { name: 'Buscar solicitudes' });
+  const buscar = page.getByRole('searchbox', { name: /Buscar solicitudes/ });
   await buscar.fill(asunto);
   await page.getByRole('link', { name: new RegExp(asunto) }).click();
   await page.getByRole('button', { name: /Volver a Solicitudes/ }).click();

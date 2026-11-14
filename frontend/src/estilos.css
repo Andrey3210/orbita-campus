@@ -193,7 +193,7 @@ footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8p
 .admin-nuevo summary { cursor: pointer; font-weight: 700; font-size: 14px; }
 .admin-nuevo[open] summary { margin-bottom: 12px; }
 .primario,.secundario,.peligro { min-height: 36px; }
-input,textarea,select { min-height: 40px; }
+input,textarea,select { min-height: 40px; font-weight: 400; }
 
 @media (max-width: 1120px) { .navegacion { width: 182px; }.navegacion .marca { font-size: 18px; }.espacio { margin-left: 182px; padding-inline: 20px; }.etapas { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 760px) {

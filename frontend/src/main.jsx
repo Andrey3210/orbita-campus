@@ -144,7 +144,7 @@ function Nueva({ catalogos, ejecutar, cerrar, ocupado }) {
     <p className="introduccion-formulario">Indica dónde ocurrió y qué necesita atender el campus.</p>
     {!catalogos.categorias.length && <p role="status">Por ahora no hay categorías disponibles para registrar una solicitud.</p>}
     <form className="formulario" onSubmit={guardar}>
-      <label>Asunto<input required name="titulo" minLength={5} maxLength={120} placeholder="Describe el problema en una línea" /></label>
+      <label>Asunto<input required name="titulo" minLength={5} maxLength={120} placeholder="Ej. Proyector sin señal" /></label>
       <label>Categoría<select name="categoriaId" aria-label="Categoría" required defaultValue=""><option value="" disabled>Elige una categoría</option>
         {catalogos.categorias.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></label>
       <label>Ubicación<input name="ubicacion" required minLength={3} maxLength={150} placeholder="Facultad, pabellón o aula" /></label>
@@ -187,7 +187,7 @@ function Listado({ solicitudes, catalogos, estudiante }) {
       {estudiante && <button className="primario" onClick={() => { location.hash = 'solicitudes/nueva'; }}>+ Nueva solicitud</button>}</div>
     <section className="panel">
       <div className="filtros">
-        <input aria-label="Buscar solicitudes" type="search" placeholder="Buscar por asunto, código o ubicación" value={texto} onChange={(e) => setTexto(e.target.value)} />
+        <input aria-label="Buscar solicitudes por asunto, código o ubicación" type="search" placeholder="Asunto, código o lugar" value={texto} onChange={(e) => setTexto(e.target.value)} />
         <select aria-label="Filtrar por estado" value={estado} onChange={(e) => setEstado(e.target.value)}><option value="">Todos los estados</option>
           {catalogos.estados.map((e) => <option key={e.clave} value={e.clave}>{e.nombre}</option>)}</select>
         <select aria-label="Filtrar por categoría" value={categoria} onChange={(e) => guardarCategoria(e.target.value)}><option value="">Todas las categorías</option>
