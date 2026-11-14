@@ -17,6 +17,33 @@ const fecha = (valor) => f.format(new Date(valor));
 const recurso = (ruta) => import.meta.env.BASE_URL + ruta;
 const claveSesion = 'orbita-campus-sesion-v2';
 
+function Navegacion({ pagina, admin }) {
+  const barra = useRef(null);
+
+  useEffect(() => {
+    const menu = barra.current;
+    const activa = menu.querySelector('[aria-current="page"]');
+    if (!activa || menu.scrollWidth <= menu.clientWidth) return;
+
+    const visible = menu.getBoundingClientRect();
+    const enlace = activa.getBoundingClientRect();
+    if (enlace.left < visible.left || enlace.right > visible.right) {
+      menu.scrollTo({ left: menu.scrollLeft + enlace.left - visible.left - (visible.width - enlace.width) / 2 });
+    }
+  }, [pagina, admin]);
+
+  return <aside className="navegacion" aria-label="Barra principal">
+    <Marca />
+    <nav ref={barra} aria-label="Secciones principales">
+      {pestañas.filter(([id]) => id !== 'admin' || admin).map(([id, texto, icono]) =>
+        <a key={id} href={'#' + id} aria-current={pagina === id ? 'page' : undefined}>
+          <span aria-hidden="true">{icono}</span>{texto}
+        </a>)}
+    </nav>
+    <small>UNMSM · Taller de Software Web</small>
+  </aside>;
+}
+
 function leerSesion() {
   try {
     const sesion = JSON.parse(sessionStorage.getItem(claveSesion));
@@ -449,12 +476,7 @@ function App() {
       evento.preventDefault();
       document.getElementById('contenido').focus();
     }}>Saltar al contenido</a>
-    <aside className="navegacion" aria-label="Barra principal">
-      <Marca />
-      <nav aria-label="Secciones principales">{pestañas.filter(([id]) => id !== 'admin' || admin).map(([id, texto, icono]) =>
-        <a key={id} href={'#' + id} aria-current={pagina === id ? 'page' : undefined}><span aria-hidden="true">{icono}</span>{texto}</a>)}</nav>
-      <small>UNMSM · Taller de Software Web</small>
-    </aside>
+    <Navegacion pagina={pagina} admin={admin} />
     <div className="espacio">
       <header className="cabecera">
         <Marca movil />

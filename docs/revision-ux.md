@@ -19,6 +19,6 @@ Se revisó el portal con perfiles de estudiante, técnico, supervisor y administ
 | Administración de usuarios | Había que recorrer toda la lista para ubicar a alguien. | Búsqueda por nombre o correo, filtro por rol y contador de resultados. |
 | Administración de categorías, áreas, prioridades y estados | Los controles de alta competían con los registros existentes. | Búsqueda por catálogo y altas de categorías y áreas en un panel desplegable. |
 | Mi cuenta | Nombre, rol y correo estaban en una sola línea. El cierre de sesiones tras cambiar la clave podía sorprender. | Ficha de perfil con campos separados y explicación antes de pulsar «Guardar y cerrar sesión». |
-| Navegación móvil y teclado | La barra inferior usaba etiquetas y áreas táctiles pequeñas. | Controles más amplios, campos de 16 px y foco en el título al navegar o abrir una ficha. |
+| Navegación móvil y teclado | La barra inferior comprimía todas las secciones en una pantalla estrecha. | La barra se desliza horizontalmente con el dedo, muestra parte de la siguiente sección y desplaza la opción activa al área visible. Conserva enlaces accesibles, campos de 16 px y foco en el título al navegar o abrir una ficha. |
 
 La aceptación automatizada es evidencia técnica del recorrido. La ficha del grupo queda como registro para las observaciones de sus participantes.
