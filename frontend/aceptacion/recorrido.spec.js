@@ -163,7 +163,12 @@ test('la barra móvil es fija y Más muestra las secciones del rol', async ({ pa
   await expect(opciones).toBeHidden();
   await mas.tap();
   await expect(mas).toHaveAttribute('aria-expanded', 'true');
-  await expect(opciones.getByRole('link')).toHaveText(['Indicadores', 'Administración', 'Cuenta']);
+  await expect(opciones).toMatchAriaSnapshot(`
+    - group "Más opciones":
+      - link "Indicadores"
+      - link "Administración"
+      - link "Cuenta"
+  `);
   await page.keyboard.press('Tab');
   await expect(opciones.getByRole('link', { name: 'Indicadores' })).toBeFocused();
   await page.keyboard.press('Escape');
@@ -181,7 +186,11 @@ test('la barra móvil es fija y Más muestra las secciones del rol', async ({ pa
   await salir(page);
   await entrar(page, 'ESTUDIANTE');
   await mas.tap();
-  await expect(opciones.getByRole('link')).toHaveText(['Indicadores', 'Cuenta']);
+  await expect(opciones).toMatchAriaSnapshot(`
+    - group "Más opciones":
+      - link "Indicadores"
+      - link "Cuenta"
+  `);
   await salir(page);
 });
 
