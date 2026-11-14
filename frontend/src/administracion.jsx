@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { normalizar, roles } from './modelo.js';
+import { useTransicionVista } from './transicion.js';
 
 const secciones = [
   ['usuarios','Usuarios'], ['categorias','Categorías'], ['areas','Áreas'],
@@ -49,6 +50,7 @@ export function Administracion({ datos, perfil, ejecutar, ocupado }) {
   const [grupo, setGrupo] = useState('usuarios');
   const [busqueda, setBusqueda] = useState('');
   const [filtroRol, setFiltroRol] = useState('');
+  const transicion = useTransicionVista(grupo, Boolean(datos));
   if (!datos) return <section className="panel"><h1>Administración</h1><p>Inicia sesión con un perfil administrador para gestionar los catálogos.</p></section>;
   const puedeCrear = ['areas','categorias'].includes(grupo);
   const registros = datos[grupo].filter(dato =>
@@ -58,20 +60,22 @@ export function Administracion({ datos, perfil, ejecutar, ocupado }) {
     <section className="panel">
       <div className="pestanas acciones" role="group" aria-label="Catálogos de administración">{secciones.map(([id, nombre]) => <button key={id} className="secundario" aria-pressed={grupo === id}
         onClick={() => { setGrupo(id); setBusqueda(''); setFiltroRol(''); }}>{nombre}</button>)}</div>
-      <div className="admin-filtros">
-        <label>Buscar en {secciones.find(([id]) => id === grupo)[1].toLowerCase()}<input type="search" value={busqueda}
-          onChange={e => setBusqueda(e.target.value)} /></label>
-        {grupo === 'usuarios' && <label>Filtrar por rol<select aria-label="Filtrar por rol" value={filtroRol} onChange={e => setFiltroRol(e.target.value)}>
-          <option value="">Todos los roles</option>{datos.roles.map(rol => <option key={rol} value={rol}>{roles[rol]}</option>)}
-        </select></label>}
-      </div>
-      <p className="cantidad" role="status">{registros.length} de {datos[grupo].length} registros</p>
-      <div className="pila admin-registros">
-        {puedeCrear && <details className="admin-nuevo" key={grupo}><summary>{grupo === 'areas' ? 'Añadir área' : 'Añadir categoría'}</summary>
-          <Fila grupo={grupo} datos={datos} perfil={perfil} ejecutar={ejecutar} ocupado={ocupado} /></details>}
-        {!registros.length && <p className="vacio">No hay registros que coincidan con la búsqueda.</p>}
-        {registros.map((dato) => <Fila key={grupo + ':' + (dato.id ?? dato.clave) + ':' + JSON.stringify(dato)}
-          grupo={grupo} dato={dato} datos={datos} perfil={perfil} ejecutar={ejecutar} ocupado={ocupado} />)}
+      <div ref={transicion}>
+        <div className="admin-filtros">
+          <label>Buscar en {secciones.find(([id]) => id === grupo)[1].toLowerCase()}<input type="search" value={busqueda}
+            onChange={e => setBusqueda(e.target.value)} /></label>
+          {grupo === 'usuarios' && <label>Filtrar por rol<select aria-label="Filtrar por rol" value={filtroRol} onChange={e => setFiltroRol(e.target.value)}>
+            <option value="">Todos los roles</option>{datos.roles.map(rol => <option key={rol} value={rol}>{roles[rol]}</option>)}
+          </select></label>}
+        </div>
+        <p className="cantidad" role="status">{registros.length} de {datos[grupo].length} registros</p>
+        <div className="pila admin-registros">
+          {puedeCrear && <details className="admin-nuevo" key={grupo}><summary>{grupo === 'areas' ? 'Añadir área' : 'Añadir categoría'}</summary>
+            <Fila grupo={grupo} datos={datos} perfil={perfil} ejecutar={ejecutar} ocupado={ocupado} /></details>}
+          {!registros.length && <p className="vacio">No hay registros que coincidan con la búsqueda.</p>}
+          {registros.map((dato) => <Fila key={grupo + ':' + (dato.id ?? dato.clave) + ':' + JSON.stringify(dato)}
+            grupo={grupo} dato={dato} datos={datos} perfil={perfil} ejecutar={ejecutar} ocupado={ocupado} />)}
+        </div>
       </div>
     </section></>;
 }

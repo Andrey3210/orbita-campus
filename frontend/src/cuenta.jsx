@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { correoValido, roles } from './modelo.js';
 import { accesoDisponible, peticion } from './api.js';
 import { informeFinal } from './enlaces.js';
+import { useTransicionVista } from './transicion.js';
 
 const recurso = (ruta) => import.meta.env.BASE_URL + ruta;
 const repositorio = 'https://github.com/Andrey3210/orbita-campus';
@@ -89,6 +90,7 @@ function FormularioAcceso({ modo, token, onSesion, mensaje, avisar, destino }) {
   const encabezado = useRef(null);
   const correoCampo = useRef(null);
   const [titulo, texto] = modos[modo];
+  const transicion = useTransicionVista(modo);
   const conToken = modo === 'verificar' || modo === 'restablecer';
   const enlaceInvalido = conToken && !tokenValido(token);
   useEffect(() => {
@@ -141,7 +143,7 @@ function FormularioAcceso({ modo, token, onSesion, mensaje, avisar, destino }) {
       setOcupado(false);
     }
   }
-  return <section className="portal-forma" aria-labelledby="acceso-titulo">
+  return <section className="portal-forma" aria-labelledby="acceso-titulo" ref={transicion}>
     {modo !== 'login' && <a href="#acceso" className="enlace acceso-volver">← Volver al inicio de sesión</a>}
     <h1 id="acceso-titulo" tabIndex="-1" ref={encabezado}>{titulo}</h1>
     <p className="portal-intro">{texto}</p>

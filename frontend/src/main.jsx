@@ -5,6 +5,7 @@ import { agrupar, indicadores, normalizar, proximo, roles, vencida } from './mod
 import { Administracion } from './administracion.jsx';
 import { Acceso, Marca, MiCuenta } from './cuenta.jsx';
 import { informeFinal } from './enlaces.js';
+import { useTransicionVista } from './transicion.js';
 import './estilos.css';
 
 const pestañas = [
@@ -368,6 +369,9 @@ function App() {
   const nueva = pagina === 'solicitudes' && subvista === 'nueva' && estudiante;
   const ficha = solicitudId && String(detalle?.solicitud.id) === solicitudId ? detalle : null;
   const destinoActivo = solicitudId || nueva;
+  const vistaLista = Boolean(sesion && !enlaceCuenta
+    && (pagina === 'cuenta' || (!cargando && (!solicitudId || ficha || detalleError))));
+  const transicion = useTransicionVista(seccion || 'inicio', vistaLista);
 
   function expirarSesion() {
     cambiarSesion(null);
@@ -491,27 +495,29 @@ function App() {
           if (solicitudId) setDetalle(await peticion('/solicitudes/' + solicitudId, { sesion }));
         })}>Actualizar datos</button>}
         {detalleError && !cargandoDetalle && <button className="enlace reintentar" onClick={() => setRecargaDetalle(n => n + 1)}>Reintentar abrir ficha</button>}
-        {(!cargando && pagina === 'solicitudes' && (!error || catalogos.estados.length > 0)) && <div hidden={Boolean(destinoActivo)}>
-          <Listado solicitudes={solicitudes} catalogos={catalogos} estudiante={estudiante} />
-        </div>}
-        {pagina === 'cuenta'
-          ? <><div className="titular"><div><h1>Mi cuenta</h1><p>Perfil y seguridad</p></div></div>
-            <MiCuenta sesion={sesion} onSesion={cambiarSesion} avisar={setMensajeAcceso} /></>
-          : cargando || error && !catalogos.estados.length ? null
-          : ficha ? <Detalle key={ficha.solicitud.id + ':' + ficha.solicitud.version} detalle={ficha} catalogos={catalogos} tecnicos={tecnicos}
-            sesion={sesion} ocupado={ocupado} ejecutar={ejecutar} cambiar={setDetalle} cerrar={volver}
-            origen={nombreOrigen[origenDetalle]} />
-          : solicitudId ? <button className="enlace volver" onClick={volver}>‹ Volver a {nombreOrigen[origenDetalle]}</button>
-          : pagina === 'inicio' ? <Inicio solicitudes={solicitudes} catalogos={catalogos} rol={sesion.perfil.rol} />
-          : nueva ? <Nueva catalogos={catalogos} ocupado={ocupado} ejecutar={ejecutar} cerrar={(id) => {
-            const destino = id ? 'solicitudes/' + id : 'solicitudes';
-            if (id) navegar.current = destino;
-            location.hash = destino;
-          }} />
-          : pagina === 'solicitudes' ? null
-          : pagina === 'seguimiento' ? <Seguimiento solicitudes={solicitudes} catalogos={catalogos} />
-          : pagina === 'estadisticas' ? <Estadisticas solicitudes={solicitudes} catalogos={catalogos} />
-          : <Administracion datos={listaAdmin} ocupado={ocupado} ejecutar={ejecutar} perfil={sesion.perfil} />}
+        <div ref={transicion}>
+          {(!cargando && pagina === 'solicitudes' && (!error || catalogos.estados.length > 0)) && <div hidden={Boolean(destinoActivo)}>
+            <Listado solicitudes={solicitudes} catalogos={catalogos} estudiante={estudiante} />
+          </div>}
+          {pagina === 'cuenta'
+            ? <><div className="titular"><div><h1>Mi cuenta</h1><p>Perfil y seguridad</p></div></div>
+              <MiCuenta sesion={sesion} onSesion={cambiarSesion} avisar={setMensajeAcceso} /></>
+            : cargando || error && !catalogos.estados.length ? null
+            : ficha ? <Detalle key={ficha.solicitud.id + ':' + ficha.solicitud.version} detalle={ficha} catalogos={catalogos} tecnicos={tecnicos}
+              sesion={sesion} ocupado={ocupado} ejecutar={ejecutar} cambiar={setDetalle} cerrar={volver}
+              origen={nombreOrigen[origenDetalle]} />
+            : solicitudId ? <button className="enlace volver" onClick={volver}>‹ Volver a {nombreOrigen[origenDetalle]}</button>
+            : pagina === 'inicio' ? <Inicio solicitudes={solicitudes} catalogos={catalogos} rol={sesion.perfil.rol} />
+            : nueva ? <Nueva catalogos={catalogos} ocupado={ocupado} ejecutar={ejecutar} cerrar={(id) => {
+              const destino = id ? 'solicitudes/' + id : 'solicitudes';
+              if (id) navegar.current = destino;
+              location.hash = destino;
+            }} />
+            : pagina === 'solicitudes' ? null
+            : pagina === 'seguimiento' ? <Seguimiento solicitudes={solicitudes} catalogos={catalogos} />
+            : pagina === 'estadisticas' ? <Estadisticas solicitudes={solicitudes} catalogos={catalogos} />
+            : <Administracion datos={listaAdmin} ocupado={ocupado} ejecutar={ejecutar} perfil={sesion.perfil} />}
+        </div>
       </main>
       <footer><span>Órbita Campus · Grupo 7</span><div className="acciones">
         <a href={informeFinal}>Informe final PDF</a>

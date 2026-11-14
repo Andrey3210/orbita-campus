@@ -164,3 +164,28 @@ test('la barra inferior se desliza sin activar enlaces durante el gesto', async 
   await expect(menu.getByRole('link', { name: 'Cuenta', exact: true })).toBeInViewport({ ratio: 0.95 });
   await salir(page);
 });
+
+test('los cambios de pantalla animan el contenido y respetan el movimiento reducido', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.transicionesDeVista = [];
+    const animar = Element.prototype.animate;
+    Element.prototype.animate = function (fotogramas, opciones) {
+      window.transicionesDeVista.push({ elemento: this.tagName, dentroDeMain: Boolean(this.closest('main')),
+        duracion: opciones.duration });
+      return animar.call(this, fotogramas, opciones);
+    };
+  });
+  await entrar(page, 'ESTUDIANTE');
+  await page.evaluate(() => { window.transicionesDeVista.length = 0; });
+  await page.getByRole('link', { name: 'Solicitudes', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Solicitudes', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => window.transicionesDeVista)).toEqual([
+    { elemento: 'DIV', dentroDeMain: true, duracion: 250 },
+  ]);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.evaluate(() => { window.transicionesDeVista.length = 0; });
+  await page.getByRole('link', { name: 'Seguimiento', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Seguimiento', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => window.transicionesDeVista)).toEqual([]);
+  await salir(page);
+});
