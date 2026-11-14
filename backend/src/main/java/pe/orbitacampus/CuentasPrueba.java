@@ -40,6 +40,7 @@ class CuentasPrueba implements ApplicationRunner {
     }
 
     static boolean reservada(String correo) {
+        if (correo.startsWith("orbita.campus.g7.lab.")) return true;
         for (var rol : Reglas.Rol.values()) {
             if (direccion(rol).equals(correo)) return true;
         }
