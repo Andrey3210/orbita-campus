@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { correoValido, roles } from './modelo.js';
-import { modoDemo, peticion } from './api.js';
-import { perfiles } from './demo.js';
+import { accesoDisponible, peticion } from './api.js';
 
 const recurso = (ruta) => import.meta.env.BASE_URL + ruta;
 const informe = recurso('Informe-segundo-entregable.pdf');
@@ -13,7 +12,6 @@ const modos = {
   reenviar: ['Reenviar verificación', 'Solicita otro enlace para confirmar tu correo institucional.'],
   verificar: ['Verificar correo', 'Confirma tu correo institucional con la contraseña que elegiste al registrarte.'],
   restablecer: ['Nueva contraseña', 'Elige una nueva contraseña para acceder a Órbita Campus.'],
-  demo: ['Explorar la demostración', 'Elige un perfil para recorrer el sistema con datos de ejemplo.'],
 };
 const tokenValido = (valor) => /^[A-Za-z0-9_-]{43}$/.test(valor ?? '');
 const requisitos = 'Usa al menos 12 caracteres, con una letra y un número (máximo 72 bytes).';
@@ -55,13 +53,6 @@ function CamposNuevaClave() {
   </>;
 }
 
-function PerfilesDemo({ sesion, onSesion, destino = 'inicio' }) {
-  return <div className="perfiles">{perfiles.map((perfil) => <button key={perfil.id} className="perfil" type="button"
-    aria-pressed={sesion?.perfil.id === perfil.id} onClick={() => { onSesion({ perfil }); location.hash = destino; }}>
-    <strong>{roles[perfil.rol]}</strong><span>{perfil.nombre}</span>
-  </button>)}</div>;
-}
-
 export function Acceso({ ruta, onSesion, mensaje, avisar, destino }) {
   const [vista, consulta] = ruta.split('?');
   const opciones = new URLSearchParams(consulta);
@@ -69,7 +60,7 @@ export function Acceso({ ruta, onSesion, mensaje, avisar, destino }) {
   const restablecer = opciones.has('restablecer');
   const vistaElegida = vista.startsWith('acceso/') ? vista.slice(7) : '';
   const modo = verificar ? 'verificar' : restablecer ? 'restablecer'
-    : ['registro', 'recuperar', 'reenviar', ...(modoDemo ? ['demo'] : [])].includes(vistaElegida) ? vistaElegida : 'login';
+    : ['registro', 'recuperar', 'reenviar'].includes(vistaElegida) ? vistaElegida : 'login';
   const token = opciones.get(modo);
   return <div className="portal">
     <main id="contenido" className="portal-contenido">
@@ -95,7 +86,6 @@ function FormularioAcceso({ modo, token, onSesion, mensaje, avisar, destino }) {
   const [titulo, texto] = modos[modo];
   const conToken = modo === 'verificar' || modo === 'restablecer';
   const enlaceInvalido = conToken && !tokenValido(token);
-  const demo = modo === 'demo';
   async function enviar(evento) {
     evento.preventDefault();
     if (ocupado || enlaceInvalido) return;
@@ -138,11 +128,10 @@ function FormularioAcceso({ modo, token, onSesion, mensaje, avisar, destino }) {
     {modo !== 'login' && <a href="#acceso" className="enlace acceso-volver">← Volver al inicio de sesión</a>}
     <h1 id="acceso-titulo">{titulo}</h1>
     <p className="portal-intro">{texto}</p>
-    {modoDemo && !demo && <p className="aviso acceso-nota">El acceso en línea está pendiente de conexión. Puedes explorar la demostración.</p>}
+    {!accesoDisponible && <p className="aviso acceso-nota">El servicio de acceso aún no está conectado a esta página.</p>}
     {mensaje && modo === 'login' && <p className="aviso" role="status">{mensaje}</p>}
     {(error || enlaceInvalido) && <p className="aviso error" role="alert">{error || 'El enlace es inválido. Solicita uno nuevo.'}</p>}
-    {demo ? <PerfilesDemo onSesion={onSesion} destino={destino} />
-      : !enlaceInvalido && <form className="formulario formulario-acceso" onSubmit={enviar} aria-busy={ocupado}>
+    {!enlaceInvalido && <form className="formulario formulario-acceso" onSubmit={enviar} aria-busy={ocupado}>
         {modo === 'registro' && <label>Nombre completo<input name="nombre" minLength={2} maxLength={100} required autoComplete="name" /></label>}
         {!conToken && <label htmlFor="correo-institucional">Correo institucional
           <input id="correo-institucional" name="correo" type="email" required maxLength={180} value={correo}
@@ -151,21 +140,19 @@ function FormularioAcceso({ modo, token, onSesion, mensaje, avisar, destino }) {
         {(modo === 'login' || modo === 'verificar') && <Clave />}
         {(modo === 'registro' || modo === 'restablecer') && <CamposNuevaClave />}
         {modo === 'login' && <a className="enlace recuperar" href="#acceso/recuperar">¿Olvidaste tu contraseña?</a>}
-        <button className="primario" disabled={ocupado}>{ocupado ? 'Procesando…'
+        <button className="primario" disabled={ocupado || !accesoDisponible}>{ocupado ? 'Procesando…'
           : ({ recuperar: 'Enviar enlace', reenviar: 'Enviar verificación', restablecer: 'Guardar contraseña' })[modo] ?? titulo}</button>
       </form>}
     {(modo === 'login' || modo === 'verificar') && <nav className="opciones-acceso" aria-label="Opciones de cuenta">
       {modo === 'login' && <a className="enlace" href="#acceso/registro">Crear cuenta</a>}
       <a className="enlace" href="#acceso/reenviar">Reenviar verificación</a></nav>}
     {modo === 'restablecer' && <a className="enlace" href="#acceso/recuperar">Solicitar otro enlace</a>}
-    {modoDemo && !demo && <div className="portal-demo"><a className="secundario" href="#acceso/demo">Explorar la demostración →</a></div>}
   </section>;
 }
 
 export function MiCuenta({ sesion, onSesion, avisar }) {
   const [error, setError] = useState('');
   const [ocupado, setOcupado] = useState(false);
-  const demo = !sesion.token;
   function cerrar(mensaje) {
     onSesion(null);
     avisar(mensaje);
@@ -190,7 +177,7 @@ export function MiCuenta({ sesion, onSesion, avisar }) {
     setError('');
     setOcupado(true);
     try {
-      if (!demo) await peticion('/auth/salir', { metodo: 'POST', sesion });
+      await peticion('/auth/salir', { metodo: 'POST', sesion });
       cerrar('Sesión cerrada.');
     } catch (fallo) {
       if (fallo.estado === 401) cerrar('Sesión cerrada.');
@@ -199,16 +186,15 @@ export function MiCuenta({ sesion, onSesion, avisar }) {
   }
   return <div className="pila">
     <section className="panel cuenta"><h2>{sesion.perfil.nombre}</h2>
-      <p>{demo ? 'Datos de demostración' : sesion.perfil.correo} · {roles[sesion.perfil.rol]}</p>
-      {demo && <PerfilesDemo sesion={sesion} onSesion={onSesion} />}
-      <button className="secundario" disabled={ocupado} onClick={salir}>{demo ? 'Salir de la demostración' : 'Cerrar sesión'}</button>
+      <p>{sesion.perfil.correo} · {roles[sesion.perfil.rol]}</p>
+      <button className="secundario" disabled={ocupado} onClick={salir}>Cerrar sesión</button>
     </section>
     {error && <p className="aviso error" role="alert">{error}</p>}
-    {!demo && <section className="panel cuenta"><h2>Cambiar contraseña</h2>
+    <section className="panel cuenta"><h2>Cambiar contraseña</h2>
       <form className="formulario" onSubmit={cambiar}>
         <Clave nombre="anterior" titulo="Contraseña actual" /><CamposNuevaClave />
         <button className="primario" disabled={ocupado}>Guardar y cerrar sesión</button>
       </form>
-    </section>}
+    </section>
   </div>;
 }

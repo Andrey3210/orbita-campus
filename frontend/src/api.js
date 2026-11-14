@@ -1,15 +1,9 @@
-import { demo } from './demo.js';
-
-const base = import.meta.env.VITE_API_URL?.replace(/\/$/, '') ?? '';
-export const modoDemo = !base && !import.meta.env.DEV;
+const configurada = import.meta.env.VITE_API_URL?.trim() ?? '';
+const base = configurada.replace(/\/$/, '');
+export const accesoDisponible = Boolean(configurada || import.meta.env.DEV);
 
 export async function peticion(ruta, { metodo = 'GET', cuerpo, sesion } = {}) {
-  if (modoDemo) {
-    if (ruta.startsWith('/auth/') || !sesion?.perfil) {
-      throw new Error('El acceso institucional en línea está pendiente de conexión.');
-    }
-    return demo(ruta, metodo, cuerpo, sesion.perfil);
-  }
+  if (!accesoDisponible) throw new Error('El servicio de acceso aún no está conectado a esta página.');
   let respuesta;
   try {
     respuesta = await fetch(base + '/api' + ruta, {

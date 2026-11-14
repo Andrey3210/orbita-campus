@@ -281,6 +281,28 @@ class ServicioCuentas {
         };
     }
 
+    void provisionarPrueba(Reglas.Rol rol, String direccion, String clave) {
+        String normal = Reglas.correo(direccion);
+        validarClave(clave);
+        Cuenta existente = porCorreo(normal);
+        if (existente != null) {
+            if (existente.perfil.rol != rol || !existente.perfil.activo || !existente.perfil.verificado) {
+                throw new IllegalStateException("La cuenta de prueba existente requiere revisión: " + normal);
+            }
+            return;
+        }
+        String nombre = switch (rol) {
+            case ESTUDIANTE -> "Estudiante de prueba";
+            case TECNICO -> "Técnico de prueba";
+            case SUPERVISOR -> "Supervisor de prueba";
+            case ADMIN -> "Administración de prueba";
+        };
+        db.sql("""
+                INSERT INTO usuarios(nombre,correo,clave,rol,verificado) VALUES (:nombre,:correo,:clave,:rol,TRUE)
+                """).param("nombre", nombre).param("correo", normal).param("clave", claves.encode(clave))
+                .param("rol", rol.name()).update();
+    }
+
     private static void validarClave(String clave) {
         if (clave.length() < 12 || clave.getBytes(StandardCharsets.UTF_8).length > 72
                 || clave.codePoints().noneMatch(Character::isLetter) || clave.codePoints().noneMatch(Character::isDigit)) {

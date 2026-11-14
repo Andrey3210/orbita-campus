@@ -41,7 +41,6 @@ p { line-height: 1.52; color: var(--suave); }
 .cabecera { display: flex; justify-content: flex-end; gap: 9px; align-items: center; min-height: 38px; margin-bottom: 16px; }
 .marca-movil { display: none; }
 .modo { background: #dff1eb; border-radius: 999px; padding: 7px 11px; font-size: 11px; color: #245c4c; font-weight: 700; }
-.etiqueta-demo { color: #664c27; background: #f5ecd8; }
 .titular { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 13px; margin-bottom: 20px; }
 .titular p { font-size: 14px; margin-top: 7px; }
 
@@ -159,7 +158,6 @@ footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8p
 .cuenta .ayuda-campo { margin: -5px 0 0; }
 .recuperar { justify-self: end; }
 .opciones-acceso { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 16px; }
-.portal-demo { border-top: 1px solid var(--borde); margin-top: 18px; padding-top: 14px; }
 .portal-pie { width: 100%; gap: 12px; padding-top: 0; }
 .portal-pie div { display: flex; flex-wrap: wrap; gap: 12px; }
 .portal-imagen { position: relative; min-height: 100%; overflow: hidden; isolation: isolate; margin: 0; background: #132640; display: grid; align-items: end; }

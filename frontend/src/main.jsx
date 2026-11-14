@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { modoDemo, peticion } from './api.js';
+import { accesoDisponible, peticion } from './api.js';
 import { agrupar, indicadores, normalizar, proximo, roles, vencida } from './modelo.js';
 import { Administracion } from './administracion.jsx';
 import { Acceso, Marca, MiCuenta } from './cuenta.jsx';
@@ -20,7 +20,7 @@ function leerSesion() {
   try {
     const sesion = JSON.parse(sessionStorage.getItem(claveSesion));
     if (!sesion?.perfil?.nombre || !Object.hasOwn(roles, sesion.perfil.rol)) return null;
-    return (modoDemo ? !sesion.token : typeof sesion.token === 'string' && sesion.token) ? sesion : null;
+    return accesoDisponible && typeof sesion.token === 'string' && sesion.token ? sesion : null;
   } catch { return null; }
 }
 
@@ -362,7 +362,7 @@ function App() {
     <div className="espacio">
       <header className="cabecera">
         <Marca movil />
-        <span className={'modo ' + (modoDemo ? 'etiqueta-demo' : '')}>{modoDemo ? 'Demo interactiva' : 'Servicios UNMSM'}</span>
+        <span className="modo">Servicios UNMSM</span>
         <a className="secundario" href="#cuenta">{nombre ? roles[sesion.perfil.rol] + ' · ' + nombre.split(' ')[0] : 'Mi cuenta'}</a>
       </header>
       <main id="contenido" tabIndex="-1">
