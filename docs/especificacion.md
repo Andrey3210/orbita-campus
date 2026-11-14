@@ -13,7 +13,8 @@ La universidad necesita un registro central para evitar pedidos perdidos, respon
 
 | Épica | Historia | Criterio de aceptación |
 | --- | --- | --- |
-| Identidad | Como estudiante quiero usar mi correo UNMSM para acreditar mi cuenta. | Formato institucional válido, enlace de un solo uso, acceso después de verificar. |
+| Identidad | Como estudiante quiero usar mi correo UNMSM para acreditar mi cuenta. | Formato institucional válido, enlace de un solo uso y contraseña del registro, acceso después de verificar. |
+| Identidad | Como usuario quiero recuperar o cambiar mi contraseña. | Enlace temporal enviado al correo verificado para recuperación, contraseña actual para cambio desde el perfil y revocación de sesiones anteriores. |
 | Registro | Como estudiante quiero informar un problema con ubicación y evidencia. | Asunto, categoría, ubicación y descripción válidos producen un código y un plazo. |
 | Atención | Como supervisor quiero asignar un técnico y priorizar el pedido. | Solo un técnico activo y verificado puede recibir una solicitud evaluada. |
 | Atención | Como técnico quiero registrar avances y resolver mis asignaciones. | Las transiciones válidas y los comentarios se añaden al historial. |
@@ -28,7 +29,7 @@ Característica: Gestión de solicitudes
 
   Escenario: El estudiante verifica el correo
     Dado un correo válido del dominio unmsm.edu.pe
-    Cuando la persona se registra y abre el enlace recibido
+    Cuando la persona se registra y confirma el enlace recibido con su contraseña de registro
     Entonces el enlace se consume una vez y la cuenta puede iniciar sesión
 
   Escenario: Registro con datos incompletos
@@ -65,4 +66,4 @@ flowchart LR
   G --> I[Imagen de la API]
 ```
 
-**Inicio** muestra el resumen, distribución, actividad reciente y guía. **Solicitudes** contiene filtros, alta y consulta de cada ficha. **Seguimiento** organiza por las seis etapas. **Indicadores** agrupa por categoría, prioridad y responsable. **Cuenta** contiene registro, login y verificación. El panel de administración se habilita para el rol correspondiente.
+**Inicio** muestra el resumen, distribución, actividad reciente y guía. **Solicitudes** contiene filtros, alta y consulta de cada ficha. **Seguimiento** organiza por las seis etapas. **Indicadores** agrupa por categoría, prioridad y responsable. La portada permite acceder, registrarse, verificar el correo o recuperar la contraseña. **Mi cuenta** muestra el perfil y permite cambiar la contraseña o cerrar sesión. El panel de administración se habilita para el rol correspondiente.

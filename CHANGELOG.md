@@ -1,5 +1,12 @@
 # Historial de versiones
 
+## 0.3.0-rc.2
+
+- Portada de acceso institucional, paleta azul y fotografías referenciales de espacios universitarios.
+- Registro, confirmación del correo con contraseña de registro, reenvío y recuperación con enlaces de un solo uso.
+- Cambio de contraseña en el perfil y revocación de sesiones al actualizar la clave.
+- Demostración por rol desde la portada e informe con las pantallas de la versión.
+
 ## 0.3.0-rc.1
 
 - Segundo entregable del Taller. Incluye la especificación, React, API REST en Spring Boot, persistencia MySQL y el flujo de seis estados.

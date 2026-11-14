@@ -1,18 +1,18 @@
 # Órbita Campus
 
-Plataforma académica para registrar y atender solicitudes de servicios de la Universidad Nacional Mayor de San Marcos. El diseño adapta el tablero, la navegación, la paleta y la mascota de [Órbita Finanzas](https://github.com/Andrey3210/orbita-finanzas).
+Proyecto académico para registrar y atender solicitudes de servicios universitarios de la UNMSM. Conserva la estructura de tablero y navegación de [Órbita Finanzas](https://github.com/Andrey3210/orbita-finanzas) y utiliza una paleta institucional con imágenes generadas de espacios universitarios referenciales.
 
 - [Demostración en GitHub Pages](https://andrey3210.github.io/orbita-campus/)
 - [Segundo entregable](docs/segundo-entregable.md) · [Especificación y BDD](docs/especificacion.md) · [Registro de uso de IA](docs/registro-ia.md)
 - [Informe del segundo entregable (PDF)](docs/Informe-segundo-entregable.pdf)
 - [API OpenAPI](docs/openapi.yaml) · [Versiones](CHANGELOG.md) · [GitHub Actions](https://github.com/Andrey3210/orbita-campus/actions)
 
-La demostración de Pages usa registros ficticios guardados en el navegador. En **Cuenta** puedes elegir cualquiera de los cuatro perfiles y ensayar el flujo completo. La API real exige correos verificados y controla los roles en el servidor. Evita ingresar datos personales en la demo.
+Desde la portada de Pages, selecciona **Explorar la demostración** para probar el sistema con registros ficticios guardados en el navegador. Puedes cambiar entre cuatro perfiles desde **Mi cuenta**. En el entorno integrado, el sistema exige verificar el correo y controla los roles en el servidor.
 
 ## Ejecutar con MySQL
 
 1. Copia `.env.example` a `.env`. Configura contraseñas de base de datos, un secreto JWT aleatorio de al menos 32 bytes y, si necesitas aprovisionar la primera cuenta administrativa, su correo institucional y contraseña.
-2. Para altas reales, configura `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` y `VERIFICATION_LINK`. El último apunta al frontend, por ejemplo `https://tu-frontend/#cuenta`. El sistema envía un enlace de un solo uso antes de habilitar el acceso.
+2. Para altas y recuperación, configura `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` y `VERIFICATION_LINK`. El último apunta a la ruta de cuenta del frontend, por ejemplo `https://tu-frontend/#cuenta`. El sistema envía enlaces de un solo uso que vencen en 30 minutos. La confirmación del correo solicita la contraseña elegida durante el registro.
 3. Desde la raíz ejecuta `docker compose up --build -d`. La API queda en `http://localhost:8080` y la base de datos conserva sus datos en un volumen.
 4. En otra terminal ejecuta `cd frontend`, `npm ci` y `npm run dev`. Abre `http://localhost:5173`. El servidor de desarrollo reenvía `/api` a Spring Boot.
 
@@ -28,7 +28,7 @@ Si ya tienes MySQL, también puedes crear una base vacía, exportar `DB_URL`, `D
 
 ## Seguridad y validaciones
 
-El correo debe tener el formato de `ejemplo@unmsm.edu.pe`. La API rechaza dominios externos, subdominios, formatos incorrectos y cuentas que aún no verificaron el buzón. Las contraseñas se guardan con BCrypt. El JWT vence a los 30 minutos y el servidor verifica el estado, rol y versión de sesión actuales. Un cambio de rol, una desactivación o el cierre de sesión invalidan los JWT anteriores.
+El correo debe tener el formato de `ejemplo@unmsm.edu.pe`. La API rechaza dominios externos, subdominios, formatos incorrectos y cuentas que aún no verificaron el buzón. Las contraseñas se guardan con BCrypt. El JWT vence a los 30 minutos y el servidor verifica el estado, rol y versión de sesión actuales. El cambio o restablecimiento de contraseña, un cambio de rol, una desactivación y el cierre de sesión revocan los JWT anteriores. La recuperación devuelve una respuesta genérica para direcciones institucionales.
 
 El acceso limita intentos desde una misma dirección de conexión. Si se usa un proxy para una instancia compartida, aplica también límites en el proxy y configura el registro de direcciones según la infraestructura.
 
@@ -39,5 +39,6 @@ La API valida el tamaño de los campos, las categorías activas, el protocolo HT
 - `npm test` comprueba formato institucional, transiciones e indicadores.
 - `mvn -f backend/pom.xml verify` prueba la API por HTTP con una base aislada. Configura `TEST_DB_URL`, `TEST_DB_USER` y `TEST_DB_PASSWORD` para ejecutar los mismos casos con MySQL.
 - Las ramas y pull requests pasan pruebas de frontend y backend. El pipeline comprueba MySQL y la construcción del contenedor. Los pushes a `main` publican Pages. Las etiquetas `v*` publican una versión y una imagen en GHCR.
-- Para conectar Pages a una API desplegada por HTTPS, agrega su URL sin `/api` como variable de repositorio `VITE_API_URL` y vuelve a ejecutar el workflow de Pages. Configura el origen `https://andrey3210.github.io` en `APP_ORIGINS`, además de un MySQL persistente y SMTP.
+- Para conectar Pages a una API desplegada por HTTPS, publica la imagen versionada de GHCR en un servicio de contenedores. Configura `DB_URL` con una base MySQL persistente y `DB_USER`, `DB_PASSWORD`, `JWT_SECRET` y SMTP como variables del servicio. Usa `APP_ORIGINS=https://andrey3210.github.io` y `VERIFICATION_LINK=https://andrey3210.github.io/orbita-campus/#cuenta`.
+- Comprueba `/actuator/health` en la API pública. Agrega el origen HTTPS de la API sin `/api` como variable de repositorio `VITE_API_URL`, ejecuta el workflow de Pages y verifica registro, inicio de sesión y recuperación con un buzón institucional.
 - `/actuator/health` indica si la API y MySQL están disponibles. `/actuator/info` muestra la versión. `/actuator/metrics` exige una sesión administradora vigente.
