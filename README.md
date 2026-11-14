@@ -5,6 +5,7 @@ Proyecto académico para registrar y atender solicitudes de servicios universita
 - [Portal en GitHub Pages](https://andrey3210.github.io/orbita-campus/)
 - [Segundo entregable](docs/segundo-entregable.md) · [Especificación y BDD](docs/especificacion.md) · [Registro de uso de IA](docs/registro-ia.md)
 - [Informe del segundo entregable (PDF)](docs/Informe-segundo-entregable.pdf)
+- [Evidencias de las fases I a III](docs/cierre-fase-iii.md)
 - [API OpenAPI](docs/openapi.yaml) · [Versiones](CHANGELOG.md) · [GitHub Actions](https://github.com/Andrey3210/orbita-campus/actions)
 
 El portal publicado usa la API de Railway y guarda sus cuentas y solicitudes en MySQL. [Estado de la API pública](https://orbita-campus-production.up.railway.app/actuator/health)

@@ -147,10 +147,26 @@ function Nueva({ catalogos, ejecutar, cerrar, ocupado }) {
   </section>;
 }
 
+const cookieCategoria = 'orbita_campus_categoria';
+
+function categoriaGuardada() {
+  const dato = document.cookie.split('; ').find((cookie) => cookie.startsWith(cookieCategoria + '='));
+  const valor = dato?.slice(cookieCategoria.length + 1) ?? '';
+  return /^\d+$/.test(valor) ? valor : '';
+}
+
 function Listado({ solicitudes, catalogos, seleccionar, abrir, estudiante }) {
   const [texto, setTexto] = useState('');
   const [estado, setEstado] = useState('');
-  const [categoria, setCategoria] = useState('');
+  const [categoriaGuardadaId, setCategoria] = useState(categoriaGuardada);
+  const categoria = catalogos.categorias.some((c) => c.id === Number(categoriaGuardadaId)) ? categoriaGuardadaId : '';
+  function guardarCategoria(valor) {
+    setCategoria(valor);
+    const ruta = new URL(import.meta.env.BASE_URL, location.href).pathname;
+    const seguro = location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = cookieCategoria + '=' + valor + '; Path=' + ruta
+      + '; SameSite=Lax; Max-Age=' + (valor ? 2592000 : 0) + seguro;
+  }
   const visibles = solicitudes.filter((s) => (!estado || estado === s.estado) && (!categoria || Number(categoria) === s.categoriaId)
     && normalizar(s.titulo + ' ' + s.codigo + ' ' + s.ubicacion).includes(normalizar(texto)));
   return <>
@@ -161,7 +177,7 @@ function Listado({ solicitudes, catalogos, seleccionar, abrir, estudiante }) {
         <input aria-label="Buscar solicitudes" type="search" placeholder="Buscar por asunto, código o ubicación" value={texto} onChange={(e) => setTexto(e.target.value)} />
         <select aria-label="Filtrar por estado" value={estado} onChange={(e) => setEstado(e.target.value)}><option value="">Todos los estados</option>
           {catalogos.estados.map((e) => <option key={e.clave} value={e.clave}>{e.nombre}</option>)}</select>
-        <select aria-label="Filtrar por categoría" value={categoria} onChange={(e) => setCategoria(e.target.value)}><option value="">Todas las categorías</option>
+        <select aria-label="Filtrar por categoría" value={categoria} onChange={(e) => guardarCategoria(e.target.value)}><option value="">Todas las categorías</option>
           {catalogos.categorias.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select>
       </div>
       <p className="cantidad">{visibles.length} de {solicitudes.length} solicitudes</p>

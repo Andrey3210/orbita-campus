@@ -76,7 +76,7 @@ class Catalogos {
                 .query(Long.class).single()==0) throw error(HttpStatus.BAD_REQUEST,"Selecciona una categoría activa.");
     }
 
-    @Bean ApplicationRunner catalogoInicial() {
+    @Bean @org.springframework.core.annotation.Order(0) ApplicationRunner catalogoInicial() {
         return args -> {
             if (areas().isEmpty()) {
                 String[][] inicial = {{"Infraestructura","Mantenimiento"},{"Soporte TI","Soporte informático"},

@@ -1,5 +1,12 @@
 # Historial de versiones
 
+## 0.3.0-rc.6
+
+- Gateway HTTP con rutas públicas controladas y límite de tamaño de petición.
+- Cookie para recordar la categoría filtrada en solicitudes.
+- Carga de evaluación con doce usuarios y veinticuatro solicitudes con historial.
+- Prototipo actualizado y evidencias de las fases I a III.
+
 ## 0.3.0-rc.5
 
 - Autoriza explícitamente el origen de GitHub Pages en la conexión con la API.
