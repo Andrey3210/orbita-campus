@@ -1,0 +1,316 @@
+openapi: 3.1.0
+info:
+  title: Órbita Campus API
+  version: 0.3.0-rc.1
+  description: API académica de solicitudes universitarias. El JWT se envía en Authorization y vence en 30 minutos.
+servers:
+  - url: http://localhost:8080/api
+security:
+  - jwt: []
+paths:
+  /auth/registro:
+    post:
+      summary: Registrar estudiante y solicitar la verificación institucional
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Registro' }
+      responses:
+        '202': { description: Solicitud aceptada }
+        '400': { $ref: '#/components/responses/Invalido' }
+        '503': { description: Servicio de verificación no disponible }
+  /auth/login:
+    post:
+      summary: Iniciar sesión con correo UNMSM verificado
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Credenciales' }
+      responses:
+        '200': { description: JWT y perfil }
+        '400': { $ref: '#/components/responses/Invalido' }
+        '401': { $ref: '#/components/responses/NoAutorizado' }
+        '403': { description: Verificación pendiente }
+        '429': { description: Demasiados intentos }
+  /auth/verificar:
+    post:
+      summary: Consumir enlace de un solo uso
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string, pattern: '^[A-Za-z0-9_-]{43}$' }
+      responses:
+        '204': { description: Dirección verificada }
+        '400': { $ref: '#/components/responses/Invalido' }
+  /auth/reenviar:
+    post:
+      summary: Solicitar nuevo enlace de confirmación
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [correo]
+              properties:
+                correo: { $ref: '#/components/schemas/Correo' }
+      responses:
+        '202': { description: Solicitud aceptada }
+        '400': { $ref: '#/components/responses/Invalido' }
+        '503': { description: Servicio de verificación no disponible }
+  /auth/perfil:
+    get:
+      summary: Consultar perfil autenticado
+      responses:
+        '200': { description: Datos del perfil }
+        '401': { $ref: '#/components/responses/NoAutorizado' }
+  /auth/salir:
+    post:
+      summary: Revocar las sesiones anteriores de la cuenta
+      responses:
+        '204': { description: Sesiones revocadas }
+  /catalogos:
+    get:
+      summary: Consultar categorías activas, prioridades y estados
+      responses:
+        '200': { description: Catálogos }
+  /tecnicos:
+    get:
+      summary: Consultar técnicos activos para asignación
+      responses:
+        '200': { description: Técnicos disponibles }
+        '403': { $ref: '#/components/responses/Prohibido' }
+  /solicitudes:
+    get:
+      summary: Listar hasta 500 solicitudes visibles para el perfil
+      responses:
+        '200': { description: Listado }
+        '401': { $ref: '#/components/responses/NoAutorizado' }
+    post:
+      summary: Registrar una solicitud como estudiante
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NuevaSolicitud' }
+      responses:
+        '201': { description: Solicitud e historial inicial }
+        '400': { $ref: '#/components/responses/Invalido' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+  /solicitudes/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      summary: Consultar detalle e historial
+      responses:
+        '200': { description: Solicitud y actividad }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+    put:
+      summary: Asignar, priorizar o avanzar el estado de un pedido
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Cambio' }
+      responses:
+        '200': { description: Solicitud actualizada }
+        '400': { $ref: '#/components/responses/Invalido' }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '409': { description: Versión obsoleta o solicitud cerrada }
+    delete:
+      summary: Retirar una solicitud propia recién registrada
+      responses:
+        '204': { description: Solicitud retirada }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '409': { description: La solicitud ya avanzó o cambió }
+  /solicitudes/{id}/comentarios:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      summary: Añadir comentario al historial
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mensaje]
+              properties:
+                mensaje: { type: string, minLength: 2, maxLength: 1000 }
+      responses:
+        '201': { description: Solicitud y actividad actualizadas }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+        '409': { description: Solicitud cerrada o cambio concurrente }
+  /admin:
+    get:
+      summary: Consultar usuarios, roles y catálogos administrativos
+      responses:
+        '200': { description: Catálogos y perfiles }
+        '403': { $ref: '#/components/responses/Prohibido' }
+  /admin/usuarios/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      summary: Cambiar rol y acceso de otra cuenta
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rol, activo]
+              properties:
+                rol: { enum: [ESTUDIANTE, TECNICO, SUPERVISOR, ADMIN] }
+                activo: { type: boolean }
+      responses:
+        '204': { description: Cuenta actualizada }
+        '403': { $ref: '#/components/responses/Prohibido' }
+        '409': { description: El técnico tiene solicitudes activas }
+  /admin/areas:
+    post:
+      summary: Crear área
+      requestBody: { $ref: '#/components/requestBodies/Nombre' }
+      responses:
+        '201': { description: Área creada }
+        '409': { description: Nombre duplicado }
+  /admin/areas/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      summary: Renombrar área
+      requestBody: { $ref: '#/components/requestBodies/Nombre' }
+      responses:
+        '204': { description: Área actualizada }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+  /admin/categorias:
+    post:
+      summary: Crear categoría
+      requestBody: { $ref: '#/components/requestBodies/Categoria' }
+      responses:
+        '201': { description: Categoría creada }
+        '409': { description: Nombre duplicado }
+  /admin/categorias/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      summary: Actualizar nombre, área y disponibilidad de una categoría
+      requestBody: { $ref: '#/components/requestBodies/Categoria' }
+      responses:
+        '204': { description: Categoría actualizada }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+  /admin/prioridades/{clave}:
+    parameters:
+      - name: clave
+        in: path
+        required: true
+        schema: { enum: [BAJA, MEDIA, ALTA, URGENTE] }
+    put:
+      summary: Actualizar etiqueta y plazo de una prioridad
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nombre, horas]
+              properties:
+                nombre: { type: string, minLength: 2, maxLength: 32 }
+                horas: { type: integer, minimum: 1, maximum: 720 }
+      responses:
+        '204': { description: Prioridad actualizada }
+        '400': { $ref: '#/components/responses/Invalido' }
+  /admin/estados/{clave}:
+    parameters:
+      - name: clave
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/Estado' }
+    put:
+      summary: Actualizar la etiqueta visible de un estado
+      requestBody: { $ref: '#/components/requestBodies/Nombre' }
+      responses:
+        '204': { description: Estado actualizado }
+        '400': { $ref: '#/components/responses/Invalido' }
+components:
+  securitySchemes:
+    jwt: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+  requestBodies:
+    Nombre:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [nombre]
+            properties:
+              nombre: { type: string, minLength: 2, maxLength: 80 }
+    Categoria:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [nombre, areaId, activo]
+            properties:
+              nombre: { type: string, minLength: 2, maxLength: 80 }
+              areaId: { type: integer, minimum: 1 }
+              activo: { type: boolean }
+  responses:
+    Invalido: { description: Formato, datos o combinación inválidos }
+    NoAutorizado: { description: JWT ausente, inválido, expirado o revocado }
+    Prohibido: { description: El permiso requerido no corresponde a este rol }
+    NoEncontrado: { description: Recurso inexistente o fuera del alcance del perfil }
+  schemas:
+    Correo: { type: string, format: email, example: ejemplo@unmsm.edu.pe, description: Dominio exacto unmsm.edu.pe }
+    Credenciales:
+      type: object
+      required: [correo, clave]
+      properties:
+        correo: { $ref: '#/components/schemas/Correo' }
+        clave: { type: string, maxLength: 72 }
+    Registro:
+      allOf:
+        - $ref: '#/components/schemas/Credenciales'
+        - type: object
+          required: [nombre]
+          properties:
+            nombre: { type: string, minLength: 2, maxLength: 100 }
+            clave: { type: string, minLength: 12, maxLength: 72 }
+    NuevaSolicitud:
+      type: object
+      required: [titulo, descripcion, ubicacion, categoriaId]
+      properties:
+        titulo: { type: string, minLength: 5, maxLength: 120 }
+        descripcion: { type: string, minLength: 10, maxLength: 2000 }
+        ubicacion: { type: string, minLength: 3, maxLength: 150 }
+        categoriaId: { type: integer, minimum: 1 }
+        evidencia: { type: [string, 'null'], maxLength: 500, description: URL HTTPS }
+    Estado:
+      enum: [REGISTRADA, EVALUACION, ASIGNADA, ATENCION, RESUELTA, CERRADA]
+    Cambio:
+      type: object
+      required: [estado, version]
+      properties:
+        estado: { $ref: '#/components/schemas/Estado' }
+        version: { type: integer, minimum: 0 }
+        prioridad: { enum: [BAJA, MEDIA, ALTA, URGENTE] }
+        responsableId: { type: integer, minimum: 1 }
