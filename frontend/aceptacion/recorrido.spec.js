@@ -134,3 +134,33 @@ test('acceso y navegación con teclado en vista móvil', async ({ page }) => {
   await expect(filtro.locator('option:checked')).toHaveText('Soporte informático');
   await salir(page);
 });
+
+test.use({ hasTouch: true });
+
+test('la barra inferior se desliza sin activar enlaces durante el gesto', async ({ page, context }) => {
+  await page.setViewportSize({ width: 320, height: 750 });
+  await entrar(page, 'ADMIN');
+  const menu = page.getByRole('navigation', { name: 'Secciones principales' });
+  const area = await menu.boundingBox();
+  const cdp = await context.newCDPSession(page);
+  const y = Math.round(area.y + 30);
+  const inicio = Math.round(area.x + area.width - 28);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: inicio, y }] });
+  for (let i = 1; i <= 10; i++) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: inicio - i * 23, y }] });
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+
+  await expect.poll(() => menu.evaluate(nav => nav.scrollLeft)).toBeGreaterThan(100);
+  await expect(page).toHaveURL(/#inicio$/);
+  expect(await page.locator('html').evaluate(html => html.scrollWidth)).toBe(320);
+
+  const administracion = menu.getByRole('link', { name: 'Administración', exact: true });
+  await expect(administracion).toBeInViewport({ ratio: 0.95 });
+  await administracion.tap();
+  await expect(page.getByRole('heading', { name: 'Administración', exact: true })).toBeVisible();
+
+  await page.goto('/#cuenta');
+  await expect(menu.getByRole('link', { name: 'Cuenta', exact: true })).toBeInViewport({ ratio: 0.95 });
+  await salir(page);
+});
