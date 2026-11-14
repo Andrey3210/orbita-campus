@@ -27,6 +27,7 @@ jobs:
       - run: npm run build
   api:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       mysql:
         image: mysql:8.4
@@ -52,12 +53,65 @@ jobs:
           java-version: 17
           cache: maven
       - name: Pruebas de HTTP sobre MySQL
-        run: mvn -B -ntp -f backend/pom.xml verify
+        run: mvn -B -ntp -f backend/pom.xml -Pseguridad verify spotbugs:spotbugs
+      - name: Analizar el código con SpotBugs y FindSecBugs
+        run: python3 calidad/sast.py
       - name: Compilar la imagen de la API
         run: docker build -t orbita-campus:ci backend
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Levantar el contenedor y la interfaz de pruebas
+        run: |
+          export JWT_SECRET="$(openssl rand -hex 32)"
+          for rol in ESTUDIANTE TECNICO SUPERVISOR ADMIN; do
+            variable="PRUEBA_${rol}_PASSWORD"
+            clave="T7-$(openssl rand -hex 18)"
+            printf '::add-mask::%s\n' "$clave"
+            export "$variable=$clave"
+            printf '%s=%s\n' "$variable" "$clave" >> "$GITHUB_ENV"
+          done
+          docker run -d --name campus-calidad --network host \
+            -e PORT=8085 -e JWT_SECRET -e SPRING_PROFILES_ACTIVE=provisionar-grupo7 \
+            -e "DB_URL=$TEST_DB_URL" -e "DB_USER=$TEST_DB_USER" -e "DB_PASSWORD=$TEST_DB_PASSWORD" \
+            -e APP_ORIGINS=https://andrey3210.github.io,http://127.0.0.1:5175 \
+            -e PRUEBA_ESTUDIANTE_PASSWORD -e PRUEBA_TECNICO_PASSWORD \
+            -e PRUEBA_SUPERVISOR_PASSWORD -e PRUEBA_ADMIN_PASSWORD orbita-campus:ci
+          curl --retry 25 --retry-connrefused --retry-all-errors --retry-delay 2 --max-time 5 \
+            --fail --silent --show-error http://127.0.0.1:8085/actuator/health
+          npm ci --prefix frontend
+          npm --prefix frontend audit --audit-level=high
+          (cd frontend && npx playwright install --with-deps chromium)
+          QA_API_PROXY=http://127.0.0.1:8085 npm --prefix frontend run dev -- --host 127.0.0.1 --port 5175 --strictPort > /tmp/campus-vite.log 2>&1 &
+          curl --retry 15 --retry-connrefused --retry-all-errors --retry-delay 1 --max-time 5 \
+            --fail --silent --show-error http://127.0.0.1:5175/ -o /dev/null
+      - name: Pruebas de aceptación en Chromium
+        run: npm --prefix frontend run test:e2e
+      - name: Pruebas DAST de caja negra
+        if: ${{ !cancelled() && env.PRUEBA_ESTUDIANTE_PASSWORD != '' }}
+        env:
+          API_PRUEBAS: http://127.0.0.1:8085
+        run: node calidad/dast.mjs
+      - name: Medir carga, estrés y recuperación
+        if: ${{ !cancelled() && env.PRUEBA_ADMIN_PASSWORD != '' }}
+        env:
+          API_PRUEBAS: http://127.0.0.1:8085
+          QA_ADMIN_EMAIL: orbita.campus.g7.admin@unmsm.edu.pe
+          QA_ADMIN_PASSWORD: ${{ env.PRUEBA_ADMIN_PASSWORD }}
+        run: node calidad/carga.mjs
       - name: Guardar informes de pruebas
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pruebas-api
-          path: backend/target/surefire-reports/
+          path: |
+            backend/target/surefire-reports/TEST-*.xml
+            frontend/playwright-report/
+            evidencia-sast.json
+            evidencia-dast.json
+            evidencia-rendimiento.json
+      - name: Mostrar diagnóstico del contenedor si falla
+        if: failure()
+        run: docker logs --tail 35 campus-calidad 2>/dev/null || true

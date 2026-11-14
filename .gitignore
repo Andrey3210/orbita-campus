@@ -6,3 +6,6 @@ target/
 !.env.example
 *.log
 .local/
+frontend/test-results/
+frontend/playwright-report/
+/evidencia-*.json

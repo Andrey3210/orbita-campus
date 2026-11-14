@@ -4,7 +4,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.crypto.spec.SecretKeySpec;
@@ -14,11 +13,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
-import org.springframework.core.Ordered;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -110,30 +106,6 @@ class Seguridad {
         UrlBasedCorsConfigurationSource origen = new UrlBasedCorsConfigurationSource();
         origen.registerCorsConfiguration("/**", config);
         return origen;
-    }
-
-    @Bean
-    FilterRegistrationBean<OncePerRequestFilter> trazas() {
-        var filtro = new OncePerRequestFilter() {
-            @Override
-            protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
-                    throws ServletException, IOException {
-                String id = UUID.randomUUID().toString();
-                long inicio = System.nanoTime();
-                MDC.put("solicitudId", id);
-                res.setHeader("X-Request-Id", id);
-                try {
-                    chain.doFilter(req, res);
-                } finally {
-                    LoggerFactory.getLogger("campus.http").info("{} {} ms (HTTP {})",
-                            req.getMethod(), (System.nanoTime() - inicio) / 1_000_000, res.getStatus());
-                    MDC.remove("solicitudId");
-                }
-            }
-        };
-        var registro = new FilterRegistrationBean<OncePerRequestFilter>(filtro);
-        registro.setOrder(Ordered.HIGHEST_PRECEDENCE);
-        return registro;
     }
 
     @Bean

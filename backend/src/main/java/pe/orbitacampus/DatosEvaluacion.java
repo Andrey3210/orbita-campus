@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -106,7 +107,7 @@ class DatosEvaluacion implements ApplicationRunner {
                 INSERT INTO usuarios(nombre,correo,clave,rol,verificado) VALUES (:nombre,:correo,:clave,:rol,TRUE)
                 """).param("nombre", Reglas.texto(usuario.nombre(), 2, 100, "El nombre"))
                 .param("correo", correo).param("clave", claves.encode(usuario.clave())).param("rol", usuario.rol().name()).update(id);
-        return new Perfil(id.getKey().longValue(), usuario.rol());
+        return new Perfil(Objects.requireNonNull(id.getKey()).longValue(), usuario.rol());
     }
 
     private List<Perfil> porRol(List<Perfil> perfiles, Reglas.Rol rol, int cantidad) {
@@ -137,7 +138,7 @@ class DatosEvaluacion implements ApplicationRunner {
                 .param("prioridad", prioridad).param("estado", estado.name()).param("creada", Timestamp.from(creada))
                 .param("vence", Timestamp.from(creada.plus(horas, ChronoUnit.HOURS)))
                 .param("resuelta", resuelta == null ? null : Timestamp.from(resuelta)).update(key);
-        long id = key.getKey().longValue();
+        long id = Objects.requireNonNull(key.getKey()).longValue();
         evento(id, estudiante, "ESTADO", "Se registró la solicitud.", creada);
         evento(id, estudiante, "COMENTARIO", caso.descripcion(), creada.plusSeconds(300));
         if (estado.ordinal() >= 1) {

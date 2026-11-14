@@ -2,13 +2,11 @@ package pe.orbitacampus;
 
 import java.net.URI;
 import java.util.Locale;
-import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 final class Reglas {
-    static final String CORREO = "(?i)^[a-z0-9_+%-]+(?:\\.[a-z0-9_+%-]+)*@unmsm\\.edu\\.pe$";
-    private static final Pattern INSTITUCIONAL = Pattern.compile(CORREO);
+    private static final String DOMINIO = "@unmsm.edu.pe";
 
     enum Rol { ESTUDIANTE, TECNICO, SUPERVISOR, ADMIN }
 
@@ -32,11 +30,19 @@ final class Reglas {
     }
 
     static String correo(String valor) {
-        String normal = valor == null ? "" : valor.strip().toLowerCase(Locale.ROOT);
-        if (!INSTITUCIONAL.matcher(normal).matches() || normal.indexOf('@') > 64) {
+        String limpio = valor == null ? "" : valor.strip();
+        String normal = limpio.toLowerCase(Locale.ROOT);
+        if (limpio.length() <= DOMINIO.length() || limpio.length() > 64 + DOMINIO.length()
+                || limpio.chars().anyMatch(c -> c > 127) || !normal.endsWith(DOMINIO)
+                || !parteLocalValida(normal.substring(0, normal.length() - DOMINIO.length()))) {
             throw error(HttpStatus.BAD_REQUEST, "Usa un correo válido de San Marcos, como ejemplo@unmsm.edu.pe.");
         }
         return normal;
+    }
+
+    private static boolean parteLocalValida(String local) {
+        if (local.startsWith(".") || local.endsWith(".") || local.contains("..")) return false;
+        return local.chars().allMatch(c -> c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || "._+%-".indexOf(c) >= 0);
     }
 
     static String texto(String valor, int minimo, int maximo, String campo) {

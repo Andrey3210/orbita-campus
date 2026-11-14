@@ -32,6 +32,7 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_AUTH: ${SMTP_AUTH:-true}
       SMTP_TLS: ${SMTP_TLS:-true}
+      TRACE_SAMPLE_RATE: ${TRACE_SAMPLE_RATE:-0.1}
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:

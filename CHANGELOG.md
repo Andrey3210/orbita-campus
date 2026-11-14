@@ -1,5 +1,12 @@
 # Historial de versiones
 
+## 1.0.0
+
+- Pruebas de aceptación en navegador, SAST, DAST y carga y estrés sobre un entorno MySQL aislado.
+- Logs JSON, correlación de trazas, métricas HTTP y monitoreo de disponibilidad con alertas en Actions.
+- Validación lineal del correo institucional, actualización de Vite y referencia de soporte en fallos de API.
+- Manual de usuario, manual técnico y guion de sustentación.
+
 ## 0.3.0-rc.6
 
 - Gateway HTTP con rutas públicas controladas y límite de tamaño de petición.

@@ -51,7 +51,11 @@ class FlujoApiTest {
 
     @Test void validaDominiosYEnlaces() {
         assertThat(Reglas.correo(" Ejemplo@UNMSM.edu.pe ")).isEqualTo("ejemplo@unmsm.edu.pe");
+        assertThat(Reglas.correo("a".repeat(64) + "@unmsm.edu.pe")).hasSize(77);
         for (String correo : List.of("ejemplo", "a..b@unmsm.edu.pe", "x@unmsm.edu.pe.evil.test", "x@gmail.com", "@unmsm.edu.pe")) {
+            assertThatThrownBy(() -> Reglas.correo(correo)).isInstanceOf(ResponseStatusException.class);
+        }
+        for (String correo : List.of("a".repeat(65) + "@unmsm.edu.pe", "K@unmsm.edu.pe", "a.".repeat(2000) + "@unmsm.edu.pe")) {
             assertThatThrownBy(() -> Reglas.correo(correo)).isInstanceOf(ResponseStatusException.class);
         }
         for (String url : List.of("javascript:alert(1)", "http://example.com/foto", "https://a:b@example.com")) {

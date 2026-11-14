@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 export default defineConfig({
   base: './',
   esbuild: { jsx: 'automatic' },
-  server: { proxy: { '/api': 'http://127.0.0.1:8080' } },
+  server: { proxy: { '/api': process.env.QA_API_PROXY ?? 'http://127.0.0.1:8080' } },
   plugins: [{
     name: 'documentos-entrega',
     closeBundle() {
